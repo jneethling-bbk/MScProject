@@ -52,6 +52,11 @@
 			<artifactId>gt-wms</artifactId>
 			<version>${geotools.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>server</groupId>
+			<artifactId>appserver</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
  	</dependencies>
 	<repositories>
         <repository>
@@ -75,28 +80,29 @@
           			<target>1.7</target>
         		</configuration>
       		</plugin>
-			<plugin>
-				<artifactId>maven-assembly-plugin</artifactId>
-				<configuration>
-					<archive>
-						<manifest>
-							<mainClass>client.appclient.MapClient</mainClass>
-						</manifest>
-					</archive>
-					<descriptorRefs>
-						<descriptorRef>jar-with-dependencies</descriptorRef>
-					</descriptorRefs>
-				</configuration>
-				<executions>
-    				<execution>
-      					<id>make-assembly</id>
-      					<phase>package</phase>
-      					<goals>
-        					<goal>single</goal>
-      					</goals>
-    				</execution>
-  				</executions>
-			</plugin>
+      		<plugin>
+            	<groupId>org.apache.maven.plugins</groupId>
+              	<artifactId>maven-shade-plugin</artifactId>
+              	<version>2.4.3</version>
+              	<executions>
+                  	<execution>
+                    	<phase>package</phase>
+                      	<goals>
+                        	<goal>shade</goal>
+                      	</goals>
+                      	<configuration>
+                        	<transformers>
+                            	<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                	<manifestEntries>
+                                    	<Main-Class>client.appclient.MapClient</Main-Class>
+                                  	</manifestEntries>
+                              	</transformer>
+                              	<transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                          	</transformers>
+                      	</configuration>
+                  	</execution>
+              </executions>
+          </plugin>
 		</plugins>
 	</build>
 </project>
