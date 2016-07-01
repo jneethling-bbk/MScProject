@@ -52,7 +52,7 @@
 			<artifactId>gt-wms</artifactId>
 			<version>${geotools.version}</version>
 		</dependency>
-	</dependencies>
+ 	</dependencies>
 	<repositories>
         <repository>
             <id>maven2-repository.dev.java.net</id>
@@ -87,6 +87,15 @@
 						<descriptorRef>jar-with-dependencies</descriptorRef>
 					</descriptorRefs>
 				</configuration>
+				<executions>
+    				<execution>
+      					<id>make-assembly</id>
+      					<phase>package</phase>
+      					<goals>
+        					<goal>single</goal>
+      					</goals>
+    				</execution>
+  				</executions>
 			</plugin>
 		</plugins>
 	</build>

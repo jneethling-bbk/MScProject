@@ -11,7 +11,6 @@ public class AppServiceImpl extends UnicastRemoteObject implements AppServiceInt
 
 	private static final long serialVersionUID = -7555554854290536269L;
 
-	@Override
 	public String getURLString() throws RemoteException {
 		return "http://ows.terrestris.de/osm/service?Service=WMS&Version=1.1.1&Request=GetCapabilities";
 	}
