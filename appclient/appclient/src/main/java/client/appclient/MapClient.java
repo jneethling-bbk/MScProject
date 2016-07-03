@@ -22,7 +22,10 @@ import org.geotools.swing.JMapFrame;
 import org.geotools.swing.JMapPane;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
-import server.appserver.AppServiceInterface;
+import common.appcommon.AppServiceInterface;
+
+//import server.appserver.AppServiceInterface;
+
 
 public class MapClient extends JFrame {
 

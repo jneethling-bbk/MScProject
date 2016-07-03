@@ -107,8 +107,8 @@
 			<version>${geotools.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>server</groupId>
-			<artifactId>appserver</artifactId>
+			<groupId>common</groupId>
+			<artifactId>appcommon</artifactId>
 			<version>0.0.1-SNAPSHOT</version>
 		</dependency>
  	</dependencies>

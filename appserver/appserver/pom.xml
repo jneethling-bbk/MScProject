@@ -22,7 +22,12 @@
       		<version>4.11</version>
       		<scope>test</scope>
     	</dependency>
-	</dependencies>
+    	<dependency>
+    		<groupId>common</groupId>
+    		<artifactId>appcommon</artifactId>
+    		<version>0.0.1-SNAPSHOT</version>
+    	</dependency>
+ 	</dependencies>
 	<repositories>
 		<repository>
 			<id>maven2-repository.dev.java.net</id>

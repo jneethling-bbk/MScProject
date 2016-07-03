@@ -3,6 +3,8 @@ package server.appserver;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 
+import common.appcommon.AppServiceInterface;
+
 public class AppServiceImpl extends UnicastRemoteObject implements AppServiceInterface {
 
 	protected AppServiceImpl() throws RemoteException {
