@@ -36,8 +36,6 @@
                       </goals>
                       <configuration>
                           <transformers>
-                              <!-- This bit sets the main class for the executable jar as you otherwise -->
-                              <!-- would with the assembly plugin                                       -->
                               <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                                   <manifestEntries>
                                       <Main-Class>client.appclient.MapClient</Main-Class>
@@ -50,8 +48,20 @@
     								  <Extension-Name>com.sun.media.imageio</Extension-Name>
                                   </manifestEntries>
                               </transformer>
-                              <!-- This bit merges the various GeoTools META-INF/services files         -->
+                              <!-- merges META-INF/services/ entries instead of overwriting --> 
                               <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                              <!-- merges META-INF/javax.media.jai.registryFile.jai entries instead of overwriting -->
+                              <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                              		<resource>META-INF/javax.media.jai.registryFile.jai</resource> 
+                              </transformer>
+                              <!-- merges META-INF/registryFile.jai entries instead of overwriting -->
+                              <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                              		<resource>META-INF/registryFile.jai</resource> 
+                              </transformer>
+                              <!-- merges META-INF/registryFile.jaiext entries instead of overwriting -->
+                              <transformer implementation="org.apache.maven.plugins.shade.resource.AppendingTransformer">
+                              		<resource>META-INF/registryFile.jaiext</resource>
+                              </transformer>
                           </transformers>
                       </configuration>
                   </execution>
