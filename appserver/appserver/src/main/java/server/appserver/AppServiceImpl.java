@@ -17,5 +17,4 @@ public class AppServiceImpl extends UnicastRemoteObject implements AppServiceInt
 		return "http://ows.terrestris.de/osm/service?Service=WMS&Version=1.1.1&Request=GetCapabilities";
 	}
 
-	
 }

@@ -24,9 +24,6 @@ import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 import common.appcommon.AppServiceInterface;
 
-//import server.appserver.AppServiceInterface;
-
-
 public class MapClient extends JFrame {
 
 	private static final long serialVersionUID = 5075090817334845128L;
@@ -34,15 +31,13 @@ public class MapClient extends JFrame {
         MapClient mc = new MapClient();
         mc.run();
 	}
-    private void getServerError() {
-		System.out.println("Connection to server failed...");
-		System.out.println("The server may be down at this time, please try again later.");
+    private String getServerError() {
+		return "Connection to server failed";
 	}
     private void run() {
         try {
         	Remote service = Naming.lookup("//127.0.0.1:1099/route_analysis");
         	AppServiceInterface appService = (AppServiceInterface) service;
-        	//System.out.println(appService.getURLString());
         	URL url = new URL(appService.getURLString());
             WebMapServer wms = new WebMapServer(url);
             
@@ -58,7 +53,7 @@ public class MapClient extends JFrame {
             CoordinateReferenceSystem myCRS = displayLayer.getCoordinateReferenceSystem();
             
             MapContent mapcontent = new MapContent();
-            mapcontent.setTitle("J Neethling: Birkbeck Computer Science MSc Project POC"); 
+            mapcontent.setTitle("Cycle route analysis client application"); 
             mapcontent.addLayer(displayLayer);
             JMapFrame myFrame = new JMapFrame(mapcontent);
             JMapPane myPane = myFrame.getMapPane();
@@ -68,18 +63,17 @@ public class MapClient extends JFrame {
             myFrame.enableToolBar(true);
             myFrame.setExtendedState(myFrame.getExtendedState()|JFrame.MAXIMIZED_BOTH);
             myFrame.setVisible(true);
-        } catch (NotBoundException ex) {
-            getServerError();
-        } catch (MalformedURLException ex) {
-            getServerError();
-        } catch (RemoteException ex) {
-            getServerError();
-        } catch (ServiceException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+            
+        } catch (NotBoundException e) {
+            System.out.println(getServerError());
+        } catch (MalformedURLException e) {
+        	System.out.println(getServerError());
+        } catch (RemoteException e) {
+        	System.out.println(getServerError());
+		} catch (ServiceException e) {
+			System.out.println(getServerError());
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			System.out.println(getServerError());
 		}
     }
 }
