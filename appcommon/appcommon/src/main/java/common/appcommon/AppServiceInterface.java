@@ -5,5 +5,6 @@ import java.rmi.RemoteException;
 
 public interface AppServiceInterface extends Remote {
 
-	String getURLString() throws RemoteException;
+	String getWMSURLString() throws RemoteException;
+	String getWMSLayerName() throws RemoteException;
 }

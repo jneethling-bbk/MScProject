@@ -38,14 +38,16 @@ public class MapClient extends JFrame {
         try {
         	Remote service = Naming.lookup("//127.0.0.1:1099/route_analysis");
         	AppServiceInterface appService = (AppServiceInterface) service;
-        	URL url = new URL(appService.getURLString());
-            WebMapServer wms = new WebMapServer(url);
+        	
+        	URL url = new URL(appService.getWMSURLString());
+        	String layerName = appService.getWMSLayerName();
             
+        	WebMapServer wms = new WebMapServer(url);            
             WMSCapabilities capabilities = wms.getCapabilities(); 
             Layer[] layers = WMSUtils.getNamedLayers(capabilities);
             Layer myLayer = null;
             for (Layer l : layers) {
-            	if (l.getName().equals("OSM-WMS")) {
+            	if (l.getName().equals(layerName)) {
             		myLayer = l;
             	}
             }
