@@ -15,7 +15,7 @@ public class AppServerStart extends JFrame {
 	
 	public AppServerStart() {
 		super("Route Analysis Application Server");
-		setSize(350, 100);
+		setSize(400, 200);
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 	}
 	
@@ -38,12 +38,13 @@ public class AppServerStart extends JFrame {
 		String registryHost = "//localhost/";
 		String serviceName = "route_analysis";
 		Naming.rebind(registryHost + serviceName, server);
+		
 		JLabel servermsg = new JLabel("The server is up");
 		FlowLayout flo = new FlowLayout();
 		ass.setLayout(flo);
 		ass.add(servermsg);
 		ass.setVisible(true);
-		//System.out.println("The server is up");
+		
 		} catch (MalformedURLException ex) {
 			ex.printStackTrace();
 		} catch (RemoteException ex) {
