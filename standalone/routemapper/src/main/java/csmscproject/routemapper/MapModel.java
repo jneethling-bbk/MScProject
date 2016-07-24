@@ -1,18 +1,34 @@
 package csmscproject.routemapper;
 
+import java.awt.Color;
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 
+import org.geotools.data.FileDataStore;
+import org.geotools.data.FileDataStoreFinder;
 import org.geotools.data.ows.Layer;
 import org.geotools.data.ows.WMSCapabilities;
+import org.geotools.data.simple.SimpleFeatureSource;
 import org.geotools.data.wms.WMSUtils;
 import org.geotools.data.wms.WebMapServer;
+import org.geotools.factory.CommonFactoryFinder;
+import org.geotools.map.FeatureLayer;
 import org.geotools.map.WMSLayer;
 import org.geotools.ows.ServiceException;
+import org.geotools.styling.FeatureTypeStyle;
+import org.geotools.styling.Fill;
+import org.geotools.styling.PolygonSymbolizer;
+import org.geotools.styling.Rule;
+import org.geotools.styling.Stroke;
+import org.geotools.styling.Style;
+import org.geotools.styling.StyleFactory;
+import org.opengis.filter.FilterFactory;
 
 public class MapModel {
-
-	private WMSLayer displayLayer;
+	
+    static StyleFactory styleFactory = CommonFactoryFinder.getStyleFactory();
+    static FilterFactory filterFactory = CommonFactoryFinder.getFilterFactory();
 	
 	public WMSLayer getBackdrop() throws ServiceException, IOException {
 		String wmsUrlString = "http://ows.terrestris.de/osm/service?Service=WMS&Version=1.1.1&Request=GetCapabilities";
@@ -29,7 +45,46 @@ public class MapModel {
         		myLayer = l;
         	}
         }
-        displayLayer = new WMSLayer(wms, myLayer );
+        WMSLayer displayLayer = new WMSLayer(wms, myLayer );
 		return displayLayer;
 	}
+	
+	public FeatureLayer getRiskLayer(File file) throws IOException {
+		FileDataStore store = FileDataStoreFinder.getDataStore(file);
+		SimpleFeatureSource featureSource = store.getFeatureSource();
+		FeatureLayer layer = new FeatureLayer(featureSource, createPolygonStyle());
+		return layer;
+	}
+	
+    /**
+     * Create a Style to draw polygon features with a thin blue outline and
+     * a cyan fill
+     */
+    private Style createPolygonStyle() {
+
+        // create a partially opaque outline stroke
+        Stroke stroke = styleFactory.createStroke(
+                filterFactory.literal(Color.RED),
+                filterFactory.literal(1),
+                filterFactory.literal(0.5));
+
+        // create a partial opaque fill
+        Fill fill = styleFactory.createFill(
+                filterFactory.literal(Color.ORANGE),
+                filterFactory.literal(0.5));
+
+        /*
+         * Setting the geometryPropertyName arg to null signals that we want to
+         * draw the default geometry of features
+         */
+        PolygonSymbolizer sym = styleFactory.createPolygonSymbolizer(stroke, fill, null);
+
+        Rule rule = styleFactory.createRule();
+        rule.symbolizers().add(sym);
+        FeatureTypeStyle fts = styleFactory.createFeatureTypeStyle(new Rule[]{rule});
+        Style style = styleFactory.createStyle();
+        style.featureTypeStyles().add(fts);
+
+        return style;
+    }
 }
