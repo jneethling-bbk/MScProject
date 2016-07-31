@@ -52,31 +52,27 @@ public class MapModel {
 	public FeatureLayer getRiskLayer(File file) throws IOException {
 		FileDataStore store = FileDataStoreFinder.getDataStore(file);
 		SimpleFeatureSource featureSource = store.getFeatureSource();
-		FeatureLayer layer = new FeatureLayer(featureSource, createPolygonStyle());
+		FeatureLayer layer = new FeatureLayer(featureSource, createPolygonStyle(Color.RED));
 		return layer;
 	}
 	
     /**
-     * Create a Style to draw polygon features with a thin blue outline and
-     * a cyan fill
+     * Create a Style to draw polygon features with a thin red outline and
+     * a red fill
      */
-    private Style createPolygonStyle() {
+    private Style createPolygonStyle(Color color) {
 
         // create a partially opaque outline stroke
         Stroke stroke = styleFactory.createStroke(
-                filterFactory.literal(Color.RED),
-                filterFactory.literal(1),
+                filterFactory.literal(color),
+                filterFactory.literal(0.1),
                 filterFactory.literal(0.5));
 
         // create a partial opaque fill
         Fill fill = styleFactory.createFill(
-                filterFactory.literal(Color.ORANGE),
+                filterFactory.literal(color),
                 filterFactory.literal(0.5));
 
-        /*
-         * Setting the geometryPropertyName arg to null signals that we want to
-         * draw the default geometry of features
-         */
         PolygonSymbolizer sym = styleFactory.createPolygonSymbolizer(stroke, fill, null);
 
         Rule rule = styleFactory.createRule();

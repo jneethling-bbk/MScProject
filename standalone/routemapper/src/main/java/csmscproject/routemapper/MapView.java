@@ -16,14 +16,14 @@ import org.geotools.swing.JMapPane;
 import org.geotools.swing.data.JFileDataStoreChooser;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
-public class MapView extends JFrame {
+public class MapView {
 
-	private static final long serialVersionUID = -5894832586538467097L;
 	MapContent mapcontent;
-	JMapPane myPane;
 	JMapFrame myFrame;
+	JMapPane myPane;
 	private WMSLayer backdrop;
 	JButton btn1;
+	JButton btn2;
 	
 	public MapView() {
 		mapcontent = new MapContent();
@@ -34,10 +34,15 @@ public class MapView extends JFrame {
 		myFrame.enableToolBar(true);
 		//myFrame.enableLayerTable(true);
         JToolBar toolBar = myFrame.getToolBar();
-        btn1 = new JButton("Get risk data");
+        btn1 = new JButton("Connect accident data");
         toolBar.addSeparator();
         toolBar.add(btn1);
-        myFrame.setExtendedState(myFrame.getExtendedState()|JFrame.MAXIMIZED_BOTH);
+        btn2 = new JButton("Toggle accident data");
+        btn2.setEnabled(false);
+        toolBar.addSeparator();
+        toolBar.add(btn2);
+        myFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        myFrame.setExtendedState(JFrame.MAXIMIZED_BOTH);
 		
 	}
 	
@@ -45,33 +50,32 @@ public class MapView extends JFrame {
 		this.backdrop = backdrop;
 	}
 	
+	
 	public void addRiskLayer(FeatureLayer riskLayer) {
 		mapcontent.addLayer(riskLayer);
-		myPane.repaint();
+		myPane.repaint();	
+	}
+	
+	public void showRiskLayer(FeatureLayer riskLayer) {
+		riskLayer.setVisible(true);
+	}
+	
+	public void hideRiskLayer(FeatureLayer riskLayer) {
+		riskLayer.setVisible(false);
 	}
 	
 	public void displayMap() {
 		CoordinateReferenceSystem myCRS = backdrop.getCoordinateReferenceSystem();    
-		//MapContent mapcontent = new MapContent();
-		//mapcontent.setTitle("Cycle route analysis client application"); 
 		mapcontent.addLayer(backdrop);
-		//JMapFrame myFrame = new JMapFrame(mapcontent);
-		//JMapPane myPane = myFrame.getMapPane();
 		ReferencedEnvelope outbounds = new ReferencedEnvelope(-77278, 45656, 6689116, 6734899, myCRS);
 		myPane.setDisplayArea(outbounds);
-		//myFrame.enableStatusBar(true);
-		//myFrame.enableToolBar(true);
-        //JToolBar toolBar = myFrame.getToolBar();
-        //btn1 = new JButton("Get accident risk");
-        //toolBar.addSeparator();
-        //toolBar.add(btn1);
-        //JButton btn2 = new JButton("Get pollution risk");
-        //toolBar.addSeparator();
-        //toolBar.add(btn2);
-        
-		//myFrame.setExtendedState(myFrame.getExtendedState()|JFrame.MAXIMIZED_BOTH);
 		myFrame.setVisible(true);
 	}
+	
+	public void enableAccidentToggler() {
+		btn2.setEnabled(true);
+	}
+	
 	File chooseFile() {
         File file = JFileDataStoreChooser.showOpenFile("shp", null);
         if (file == null) {
@@ -80,8 +84,10 @@ public class MapView extends JFrame {
         return file;
 	}
 		
-	void addLoadBtnListener(ActionListener listenForLoadBtn) {
-		btn1.addActionListener(listenForLoadBtn);
-
+	void addConnectAccidentListener(ActionListener listenForAccidentCon) {
+		btn1.addActionListener(listenForAccidentCon);
+	}
+	void addToggleAccidentListener(ActionListener listenForAccidentToggle) {
+		btn2.addActionListener(listenForAccidentToggle);
 	}
 }
