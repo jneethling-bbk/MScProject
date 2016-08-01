@@ -46,13 +46,21 @@ public class MapModel {
         	}
         }
         WMSLayer displayLayer = new WMSLayer(wms, myLayer );
+        displayLayer.setTitle("Backdrop");
 		return displayLayer;
 	}
 	
-	public FeatureLayer getRiskLayer(File file) throws IOException {
+	public FeatureLayer getRiskLayer(File file, String layerTitle) throws IOException {
+		Color color;
+		if (layerTitle.equals("Accidents")) {
+			color = Color.RED;
+		} else {
+			color = Color.ORANGE;
+		}
 		FileDataStore store = FileDataStoreFinder.getDataStore(file);
 		SimpleFeatureSource featureSource = store.getFeatureSource();
-		FeatureLayer layer = new FeatureLayer(featureSource, createPolygonStyle(Color.RED));
+		FeatureLayer layer = new FeatureLayer(featureSource, createPolygonStyle(color));
+		layer.setTitle(layerTitle);
 		return layer;
 	}
 	

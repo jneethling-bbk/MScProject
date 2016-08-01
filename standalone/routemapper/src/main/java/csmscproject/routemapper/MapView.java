@@ -2,6 +2,7 @@ package csmscproject.routemapper;
 
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.util.List;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
@@ -9,6 +10,7 @@ import javax.swing.JToolBar;
 
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.map.FeatureLayer;
+import org.geotools.map.Layer;
 import org.geotools.map.MapContent;
 import org.geotools.map.WMSLayer;
 import org.geotools.swing.JMapFrame;
@@ -24,6 +26,8 @@ public class MapView {
 	private WMSLayer backdrop;
 	JButton btn1;
 	JButton btn2;
+	JButton btn3;
+	JButton btn4;
 	
 	public MapView() {
 		mapcontent = new MapContent();
@@ -41,18 +45,32 @@ public class MapView {
         btn2.setEnabled(false);
         toolBar.addSeparator();
         toolBar.add(btn2);
+        btn3 = new JButton("Connect pollution data");
+        toolBar.addSeparator();
+        toolBar.add(btn3);
+        btn4 = new JButton("Toggle pollution data");
+        btn4.setEnabled(false);
+        toolBar.addSeparator();
+        toolBar.add(btn4);
         myFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         myFrame.setExtendedState(JFrame.MAXIMIZED_BOTH);
 		
+	}
+	public List<Layer> getLayerList() {
+		return mapcontent.layers();
 	}
 	
 	public void setBackdrop(WMSLayer backdrop) {
 		this.backdrop = backdrop;
 	}
-	
-	
+		
 	public void addRiskLayer(FeatureLayer riskLayer) {
 		mapcontent.addLayer(riskLayer);
+		myPane.repaint();	
+	}
+	
+	public void removeRiskLayer(FeatureLayer riskLayer) {
+		mapcontent.removeLayer(riskLayer);
 		myPane.repaint();	
 	}
 	
@@ -76,6 +94,10 @@ public class MapView {
 		btn2.setEnabled(true);
 	}
 	
+	public void enablePollutionToggler() {
+		btn4.setEnabled(true);
+	}
+	
 	File chooseFile() {
         File file = JFileDataStoreChooser.showOpenFile("shp", null);
         if (file == null) {
@@ -89,5 +111,11 @@ public class MapView {
 	}
 	void addToggleAccidentListener(ActionListener listenForAccidentToggle) {
 		btn2.addActionListener(listenForAccidentToggle);
+	}
+	void addConnectPollutionListener(ActionListener listenForPollutionCon) {
+		btn3.addActionListener(listenForPollutionCon);
+	}
+	void addTogglePollutionListener(ActionListener listenForPollutionToggle) {
+		btn4.addActionListener(listenForPollutionToggle);
 	}
 }
