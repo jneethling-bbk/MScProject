@@ -6,10 +6,9 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
-import javax.swing.JButton;
-
 import org.geotools.map.FeatureLayer;
 import org.geotools.map.Layer;
+import org.geotools.map.WMSLayer;
 import org.geotools.ows.ServiceException;
 
 public class MapController {
@@ -29,15 +28,17 @@ public class MapController {
 	}
 	
 	public void DisplayMap() {
+		WMSLayer backdrop = null;
 		try {
-			view.setBackdrop(model.getBackdrop());
+			backdrop = model.getBackdrop();
 		} catch (ServiceException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			view.displayErrorMessage("Problem with prefered web map server");
+			System.exit(0);
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			view.displayErrorMessage("Problem with prefered web map server");
+			System.exit(0);
 		}
+		view.setBackdrop(backdrop);
 		view.displayMap();
 	}
 	
@@ -46,11 +47,12 @@ public class MapController {
 			String source = e.getActionCommand();
 			if (source.equals("Connect accident data")) {
 				File file = view.chooseFile();
+				if (file == null) {return;}
 				try {
 					accidentLayer = model.getRiskLayer(file, "Accidents");
 				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
+					view.displayErrorMessage("Bad file: please try another...");
+					return;
 				}
 				List<Layer> layerList = view.getLayerList();
 				for (Layer l : layerList) {
@@ -62,11 +64,12 @@ public class MapController {
 				view.enableAccidentToggler();
 			} else if (source.equals("Connect pollution data")) {
 				File file = view.chooseFile();
+				if (file == null) {return;}
 				try {
 					pollutionLayer = model.getRiskLayer(file, "Pollution");
 				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
+					view.displayErrorMessage("Bad file: please try another...");
+					return;
 				}
 				List<Layer> layerList = view.getLayerList();
 				for (Layer l : layerList) {

@@ -6,6 +6,7 @@ import java.util.List;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import javax.swing.JToolBar;
 
 import org.geotools.geometry.jts.ReferencedEnvelope;
@@ -19,10 +20,11 @@ import org.geotools.swing.data.JFileDataStoreChooser;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 public class MapView {
-
-	MapContent mapcontent;
+	
 	JMapFrame myFrame;
 	JMapPane myPane;
+	MapContent mapcontent;
+	CoordinateReferenceSystem myCRS;
 	private WMSLayer backdrop;
 	JButton btn1;
 	JButton btn2;
@@ -59,10 +61,6 @@ public class MapView {
 	public List<Layer> getLayerList() {
 		return mapcontent.layers();
 	}
-	
-	public void setBackdrop(WMSLayer backdrop) {
-		this.backdrop = backdrop;
-	}
 		
 	public void addRiskLayer(FeatureLayer riskLayer) {
 		mapcontent.addLayer(riskLayer);
@@ -81,9 +79,12 @@ public class MapView {
 	public void hideRiskLayer(FeatureLayer riskLayer) {
 		riskLayer.setVisible(false);
 	}
+	public void setBackdrop(WMSLayer backdrop) {
+		this.backdrop = backdrop;
+	}
 	
 	public void displayMap() {
-		CoordinateReferenceSystem myCRS = backdrop.getCoordinateReferenceSystem();    
+		myCRS = backdrop.getCoordinateReferenceSystem();    
 		mapcontent.addLayer(backdrop);
 		ReferencedEnvelope outbounds = new ReferencedEnvelope(-77278, 45656, 6689116, 6734899, myCRS);
 		myPane.setDisplayArea(outbounds);
@@ -97,6 +98,11 @@ public class MapView {
 	public void enablePollutionToggler() {
 		btn4.setEnabled(true);
 	}
+	
+	void displayErrorMessage(String errorMessage){
+		JOptionPane.showMessageDialog(myFrame, errorMessage);
+	}
+
 	
 	File chooseFile() {
         File file = JFileDataStoreChooser.showOpenFile("shp", null);

@@ -20,6 +20,7 @@ import org.geotools.styling.FeatureTypeStyle;
 import org.geotools.styling.Fill;
 import org.geotools.styling.PolygonSymbolizer;
 import org.geotools.styling.Rule;
+import org.geotools.styling.SLD;
 import org.geotools.styling.Stroke;
 import org.geotools.styling.Style;
 import org.geotools.styling.StyleFactory;
@@ -30,7 +31,7 @@ public class MapModel {
     static StyleFactory styleFactory = CommonFactoryFinder.getStyleFactory();
     static FilterFactory filterFactory = CommonFactoryFinder.getFilterFactory();
 	
-	public WMSLayer getBackdrop() throws ServiceException, IOException {
+	public WMSLayer getBackdrop() throws IOException, ServiceException {
 		String wmsUrlString = "http://ows.terrestris.de/osm/service?Service=WMS&Version=1.1.1&Request=GetCapabilities";
 		String wmsLayerName = "OSM-WMS";
 		
@@ -50,6 +51,7 @@ public class MapModel {
 		return displayLayer;
 	}
 	
+	
 	public FeatureLayer getRiskLayer(File file, String layerTitle) throws IOException {
 		Color color;
 		if (layerTitle.equals("Accidents")) {
@@ -58,6 +60,9 @@ public class MapModel {
 			color = Color.ORANGE;
 		}
 		FileDataStore store = FileDataStoreFinder.getDataStore(file);
+		if (store == null) {
+			throw new IOException();
+		}
 		SimpleFeatureSource featureSource = store.getFeatureSource();
 		FeatureLayer layer = new FeatureLayer(featureSource, createPolygonStyle(color));
 		layer.setTitle(layerTitle);
