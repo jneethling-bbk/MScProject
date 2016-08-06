@@ -17,7 +17,10 @@ import org.geotools.map.WMSLayer;
 import org.geotools.swing.JMapFrame;
 import org.geotools.swing.JMapPane;
 import org.geotools.swing.data.JFileDataStoreChooser;
+import org.opengis.geometry.BoundingBox;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
+
+import com.vividsolutions.jts.geom.Envelope;
 
 public class MapView {
 	
@@ -25,11 +28,13 @@ public class MapView {
 	JMapPane myPane;
 	MapContent mapcontent;
 	CoordinateReferenceSystem myCRS;
-	private WMSLayer backdrop;
+	WMSLayer backdrop;
 	JButton btn1;
 	JButton btn2;
 	JButton btn3;
 	JButton btn4;
+	JButton btn5;
+	JButton btn6;
 	
 	public MapView() {
 		mapcontent = new MapContent();
@@ -54,6 +59,13 @@ public class MapView {
         btn4.setEnabled(false);
         toolBar.addSeparator();
         toolBar.add(btn4);
+        btn5 = new JButton("Add user route");
+        toolBar.addSeparator();
+        toolBar.add(btn5);
+        btn6 = new JButton("Evaluate user route");
+        btn6.setEnabled(false);
+        toolBar.addSeparator();
+        toolBar.add(btn6);
         myFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         myFrame.setExtendedState(JFrame.MAXIMIZED_BOTH);
 		
@@ -62,13 +74,13 @@ public class MapView {
 		return mapcontent.layers();
 	}
 		
-	public void addRiskLayer(FeatureLayer riskLayer) {
-		mapcontent.addLayer(riskLayer);
+	public void addLayer(FeatureLayer layer) {
+		mapcontent.addLayer(layer);
 		myPane.repaint();	
 	}
 	
-	public void removeRiskLayer(FeatureLayer riskLayer) {
-		mapcontent.removeLayer(riskLayer);
+	public void removeLayer(FeatureLayer layer) {
+		mapcontent.removeLayer(layer);
 		myPane.repaint();	
 	}
 	
@@ -79,11 +91,9 @@ public class MapView {
 	public void hideRiskLayer(FeatureLayer riskLayer) {
 		riskLayer.setVisible(false);
 	}
-	public void setBackdrop(WMSLayer backdrop) {
-		this.backdrop = backdrop;
-	}
 	
-	public void displayMap() {
+	public void displayMap(WMSLayer backdrop) {
+		this.backdrop = backdrop;
 		myCRS = backdrop.getCoordinateReferenceSystem();    
 		mapcontent.addLayer(backdrop);
 		ReferencedEnvelope outbounds = new ReferencedEnvelope(-77278, 45656, 6689116, 6734899, myCRS);
@@ -99,10 +109,13 @@ public class MapView {
 		btn4.setEnabled(true);
 	}
 	
+	public void enableEvaluateBtn() {
+		btn6.setEnabled(true);
+	}
+	
 	void displayErrorMessage(String errorMessage){
 		JOptionPane.showMessageDialog(myFrame, errorMessage);
 	}
-
 	
 	File chooseFile() {
         File file = JFileDataStoreChooser.showOpenFile("shp", null);
@@ -123,5 +136,19 @@ public class MapView {
 	}
 	void addTogglePollutionListener(ActionListener listenForPollutionToggle) {
 		btn4.addActionListener(listenForPollutionToggle);
+	}
+	void addUserRouteListener(ActionListener listenForAddUserRoute) {
+		btn5.addActionListener(listenForAddUserRoute);
+	}
+	void addEvaluateListener(ActionListener listenForRouteEval) {
+		btn6.addActionListener(listenForRouteEval);
+	}
+	
+	public void zoomToLayer(FeatureLayer userRouteLayer) {
+		BoundingBox inbounds = userRouteLayer.getBounds();
+		((Envelope) inbounds).expandBy(500);
+		myPane.setDisplayArea(inbounds);
+		myPane.repaint();
+		
 	}
 }

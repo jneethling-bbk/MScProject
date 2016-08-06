@@ -17,6 +17,7 @@ public class MapController {
 	private MapView view;
 	FeatureLayer accidentLayer = null;
 	FeatureLayer pollutionLayer = null;
+	FeatureLayer userRouteLayer = null;
 	
 	public MapController(MapModel model, MapView view) {
 		this.model = model;
@@ -25,21 +26,13 @@ public class MapController {
 		this.view.addToggleAccidentListener(new BtnListener());
 		this.view.addConnectPollutionListener(new BtnListener());
 		this.view.addTogglePollutionListener(new BtnListener());
+		this.view.addUserRouteListener(new BtnListener());
+		this.view.addEvaluateListener(new BtnListener());
 	}
 	
-	public void DisplayMap() {
-		WMSLayer backdrop = null;
-		try {
-			backdrop = model.getBackdrop();
-		} catch (ServiceException e) {
-			view.displayErrorMessage("Problem with prefered web map server");
-			System.exit(0);
-		} catch (IOException e) {
-			view.displayErrorMessage("Problem with prefered web map server");
-			System.exit(0);
-		}
-		view.setBackdrop(backdrop);
-		view.displayMap();
+	public void configureMapView() throws ServiceException, IOException, NullPointerException {
+		WMSLayer backdrop = model.getBackdrop();
+		view.displayMap(backdrop);
 	}
 	
 	class BtnListener implements ActionListener {
@@ -57,10 +50,10 @@ public class MapController {
 				List<Layer> layerList = view.getLayerList();
 				for (Layer l : layerList) {
 					if (l.getTitle().equals("Accidents")) {
-						view.removeRiskLayer((FeatureLayer) l);
+						view.removeLayer((FeatureLayer) l);
 					}
 				}
-				view.addRiskLayer(accidentLayer);
+				view.addLayer(accidentLayer);
 				view.enableAccidentToggler();
 			} else if (source.equals("Connect pollution data")) {
 				File file = view.chooseFile();
@@ -74,10 +67,10 @@ public class MapController {
 				List<Layer> layerList = view.getLayerList();
 				for (Layer l : layerList) {
 					if (l.getTitle().equals("Pollution")) {
-						view.removeRiskLayer((FeatureLayer) l);
+						view.removeLayer((FeatureLayer) l);
 					}
 				}
-				view.addRiskLayer(pollutionLayer);
+				view.addLayer(pollutionLayer);
 				view.enablePollutionToggler();
 			} else if (source.equals("Toggle accident data")) {
 				if (accidentLayer.isVisible()) {
@@ -91,6 +84,30 @@ public class MapController {
 				} else {
 					view.showRiskLayer(pollutionLayer);
 				}
+			} else if (source.equals("Add user route")) {
+				File file = view.chooseFile();
+				if (file == null) {return;}
+				try {
+					userRouteLayer = model.getRouteLayer(file, "Route");
+				} catch (IOException e1) {
+					view.displayErrorMessage("Bad file: please try another...");
+					return;
+				}
+				List<Layer> layerList = view.getLayerList();
+				for (Layer l : layerList) {
+					if (l.getTitle().equals("Route")) {
+						view.removeLayer((FeatureLayer) l);
+					}
+				}
+				view.addLayer(userRouteLayer);
+				view.enableEvaluateBtn();
+			} else if (source.equals("Evaluate user route")) {
+				view.zoomToLayer(userRouteLayer);
+				double routeLen = model.getRouteLen(userRouteLayer);
+				int roundedAnswer = (int)routeLen;
+				int v = model.getNumIntersects(userRouteLayer, accidentLayer);
+				view.displayErrorMessage("Length of route: " + roundedAnswer + " meters; Number of accident sites: " + v);
+				
 			}
 		}
 	}
