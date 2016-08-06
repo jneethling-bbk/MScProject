@@ -16,7 +16,6 @@ import org.geotools.data.simple.SimpleFeatureSource;
 import org.geotools.data.wms.WMSUtils;
 import org.geotools.data.wms.WebMapServer;
 import org.geotools.factory.CommonFactoryFinder;
-import org.geotools.feature.DefaultFeatureCollection;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.geometry.jts.JTS;
 import org.geotools.map.FeatureLayer;
@@ -33,11 +32,12 @@ import org.geotools.styling.Stroke;
 import org.geotools.styling.Style;
 import org.geotools.styling.StyleFactory;
 import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.filter.FilterFactory;
+import org.opengis.geometry.MismatchedDimensionException;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.NoSuchAuthorityCodeException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
+import org.opengis.referencing.operation.MathTransform;
 import org.opengis.referencing.operation.TransformException;
 
 import com.vividsolutions.jts.geom.Coordinate;
@@ -152,7 +152,7 @@ public class MapModel {
 	//Create a Style to draw the line features of the user route  
     private Style createLineStyle() {
         Stroke stroke = styleFactory.createStroke(
-                filterFactory.literal(Color.BLACK),
+                filterFactory.literal(Color.DARK_GRAY),
                 filterFactory.literal(2));
 
         LineSymbolizer sym = styleFactory.createLineSymbolizer(stroke, null);
@@ -169,7 +169,7 @@ public class MapModel {
     	int val = 0;
 		FeatureCollection lineCollection = null;
 		FeatureCollection polyCollection = null;
-        CoordinateReferenceSystem crs = null;
+        //CoordinateReferenceSystem crs = null;
         
 		try {
 			lineCollection = userRouteLayer.getFeatureSource().getFeatures();
@@ -226,9 +226,17 @@ public class MapModel {
 	public double getRouteLen(FeatureLayer userRouteLayer) {
 		double val = 0.0;
 		FeatureCollection lineCollection = null;
-        CoordinateReferenceSystem crs = null;
+        CoordinateReferenceSystem mapcrs = null;
+        CoordinateReferenceSystem measurecrs = null;
+        MathTransform transform = null;
+        Geometry startPTransformed = null;
+        Geometry endPTransformed = null;
+        
 		try {
-			crs = CRS.decode("EPSG:3857");
+			mapcrs = CRS.decode("EPSG:3857");
+			measurecrs = CRS.decode("EPSG:4326");
+			//measurecrs = CRS.decode("EPSG:27700");
+			transform = CRS.findMathTransform(mapcrs, measurecrs, true);
 		} catch (NoSuchAuthorityCodeException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
@@ -236,7 +244,7 @@ public class MapModel {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
-        GeodeticCalculator gc = new GeodeticCalculator(crs);
+        GeodeticCalculator gc = new GeodeticCalculator(measurecrs);
 		try {
 			lineCollection = userRouteLayer.getFeatureSource().getFeatures();
 		} catch (IOException e) {
@@ -254,27 +262,28 @@ public class MapModel {
 	            	lines[ i ] = (LineString) geom.getGeometryN( i );
 		            Point startP = lines[i].getStartPoint();
 		            Point endP = lines[i].getEndPoint();
-	        	    Coordinate start = startP.getCoordinate();
-	        	    Coordinate end = endP.getCoordinate();
+		            
 		            try {
-						gc.setStartingPosition( JTS.toDirectPosition( start, crs ) );
-					} catch (TransformException e) {
+						startPTransformed = JTS.transform(startP, transform);
+						endPTransformed = JTS.transform(endP, transform);
+		        	    Coordinate start = startPTransformed.getCoordinate();
+		        	    Coordinate end = endPTransformed.getCoordinate();
+		        	    gc.setStartingPosition( JTS.toDirectPosition( start, measurecrs ) );
+		        	    gc.setDestinationPosition( JTS.toDirectPosition( end, measurecrs ) );
+		        	    
+					} catch (MismatchedDimensionException e1) {
 						// TODO Auto-generated catch block
-						e.printStackTrace();
+						e1.printStackTrace();
+					} catch (TransformException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
 					}
-	        	    try {
-						gc.setDestinationPosition( JTS.toDirectPosition( end, crs ) );
-					} catch (TransformException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}     	    
+		                	    
 	        	    double distance = gc.getOrthodromicDistance();
 	        	    val = val + distance;
 	        	    
 	            }
    	    
-        	    double distance = gc.getOrthodromicDistance();
-        	    val = val + distance;
 	        }
 	    }
 	    finally {
