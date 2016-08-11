@@ -3,10 +3,10 @@ package csmscproject.routemapper;
 public class RouteReportImpl implements RouteReport {
 
 	private String routeFileName;
-	private Integer routeLength;
+	private Long routeLength;
 	private Double slope;
-	private Integer accidentCount;
-	private Integer pollutionPercentage;
+	private Long accidentCount;
+	private Long pollutionPercentage;
 	
 	public void setRouteFileName(String routeFileName) {
 		if (routeFileName == null) {
@@ -15,7 +15,7 @@ public class RouteReportImpl implements RouteReport {
 		this.routeFileName = routeFileName;
 	}
 
-	public void setRouteLength(Integer routeLength) {
+	public void setRouteLength(Long routeLength) {
 		if (routeLength <= 0) {
 			throw new IllegalArgumentException("The lenght of the route must be more than zero");
 		}
@@ -29,14 +29,14 @@ public class RouteReportImpl implements RouteReport {
 		this.slope = slope;
 	}
 
-	public void setAccidentCount(Integer accidentCount) {
+	public void setAccidentCount(Long accidentCount) {
 		if (accidentCount < 0) {
 			throw new IllegalArgumentException("The accident count cannot be negative");
 		}
 		this.accidentCount = accidentCount;
 	}
 
-	public void setPollutionPercentage(Integer pollutionPercentage) {
+	public void setPollutionPercentage(Long pollutionPercentage) {
 		if (pollutionPercentage < 0 || pollutionPercentage > 100) {
 			throw new IllegalArgumentException("The pollution percentage must be between 0 and 100");
 		}
@@ -44,28 +44,23 @@ public class RouteReportImpl implements RouteReport {
 	}
 
 	public String getRouteFileName() {
-		// TODO Auto-generated method stub
-		return null;
+		return routeFileName;
 	}
 
-	public Integer getRouteLength() {
-		// TODO Auto-generated method stub
-		return 0;
+	public Long getRouteLength() {
+		return routeLength;
 	}
 
 	public Double getSlope() {
-		// TODO Auto-generated method stub
-		return 0.0;
+		return slope;
 	}
 
-	public Integer getAccidentCount() {
-		// TODO Auto-generated method stub
-		return 0;
+	public Long getAccidentCount() {
+		return accidentCount;
 	}
 
-	public Integer getPollutionPercentage() {
-		// TODO Auto-generated method stub
-		return 0;
+	public Long getPollutionPercentage() {
+		return pollutionPercentage;
 	}
 
 }

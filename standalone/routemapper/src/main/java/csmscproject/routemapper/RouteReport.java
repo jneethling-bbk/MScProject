@@ -3,13 +3,13 @@ package csmscproject.routemapper;
 public interface RouteReport {
 
 	void setRouteFileName(String routeFileName);
-	void setRouteLength(Integer routeLength);
+	void setRouteLength(Long routeLength);
 	void setSlope(Double slope);
-	void setAccidentCount(Integer accidentCount);
-	void setPollutionPercentage(Integer pollutionPercentage);
+	void setAccidentCount(Long accidentCount);
+	void setPollutionPercentage(Long pollutionPercentage);
 	String getRouteFileName();
-	Integer getRouteLength();
+	Long getRouteLength();
 	Double getSlope();
-	Integer getAccidentCount();
-	Integer getPollutionPercentage();
+	Long getAccidentCount();
+	Long getPollutionPercentage();
 }
