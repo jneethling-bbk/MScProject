@@ -14,7 +14,7 @@ public class RouteReportTest {
 		testInstance = new RouteReportImpl();
 		testInstance.setRouteFileName(null);
 	}
-	@Test(expected = IllegalArgumentException.class)
+	@Test(expected = NullPointerException.class)
 	public void setRouteLengthNullTest() {
 		
 		testInstance = new RouteReportImpl();
