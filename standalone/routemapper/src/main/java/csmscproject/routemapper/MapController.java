@@ -15,9 +15,14 @@ public class MapController {
 
 	private MapModel model;
 	private MapView view;
-	FeatureLayer accidentLayer = null;
-	FeatureLayer pollutionLayer = null;
-	FeatureLayer userRouteLayer = null;
+	private FeatureLayer accidentLayer = null;
+	private FeatureLayer pollutionLayer = null;
+	private FeatureLayer userRouteLayer = null;
+	private String userRouteFileName = null;
+	int routeLength;
+	double slope;
+	int accidentCount;
+	int pollutionPercentage;
 	
 	public MapController(MapModel model, MapView view) {
 		this.model = model;
@@ -26,8 +31,10 @@ public class MapController {
 		this.view.addToggleAccidentListener(new BtnListener());
 		this.view.addConnectPollutionListener(new BtnListener());
 		this.view.addTogglePollutionListener(new BtnListener());
+		this.view.addRiskAppetiteListener(new BtnListener());
 		this.view.addUserRouteListener(new BtnListener());
 		this.view.addEvaluateListener(new BtnListener());
+		this.view.addZoomSAreaListener(new BtnListener());
 	}
 	
 	public void configureMapView() throws ServiceException, IOException, NullPointerException {
@@ -38,7 +45,7 @@ public class MapController {
 	class BtnListener implements ActionListener {
 		public void actionPerformed(ActionEvent e) {			
 			String source = e.getActionCommand();
-			if (source.equals("Connect accident data")) {
+			if (source.equals("Connect traffic risk")) {
 				File file = view.chooseFile();
 				if (file == null) {return;}
 				try {
@@ -54,8 +61,10 @@ public class MapController {
 					}
 				}
 				view.addLayer(accidentLayer);
+				view.zoomToLayer(accidentLayer);
 				view.enableAccidentToggler();
-			} else if (source.equals("Connect pollution data")) {
+				view.enableZoomBtn();
+			} else if (source.equals("Connect pollution risk")) {
 				File file = view.chooseFile();
 				if (file == null) {return;}
 				try {
@@ -72,21 +81,25 @@ public class MapController {
 				}
 				view.addLayer(pollutionLayer);
 				view.enablePollutionToggler();
-			} else if (source.equals("Toggle accident data")) {
+			} else if (source.equals("Toggle traffic risk")) {
 				if (accidentLayer.isVisible()) {
 					view.hideRiskLayer(accidentLayer);
 				} else {
 					view.showRiskLayer(accidentLayer);
 				}
-			} else if (source.equals("Toggle pollution data")) {
+			} else if (source.equals("Toggle pollution risk")) {
 				if (pollutionLayer.isVisible()) {
 					view.hideRiskLayer(pollutionLayer);
 				} else {
 					view.showRiskLayer(pollutionLayer);
 				}
+			} else if (source.equals("Set risk appetite")) {
+				view.setRiskAppetite();
 			} else if (source.equals("Add user route")) {
 				File file = view.chooseFile();
 				if (file == null) {return;}
+				userRouteFileName = file.getName();
+				//routeFile = file;
 				try {
 					userRouteLayer = model.getRouteLayer(file, "Route");
 				} catch (IOException e1) {
@@ -101,13 +114,25 @@ public class MapController {
 				}
 				view.addLayer(userRouteLayer);
 				view.enableEvaluateBtn();
-			} else if (source.equals("Evaluate user route")) {
+			} else if (source.equals("Evaluate user route")) {				
+				routeLength = (int) model.getRouteLen(userRouteLayer);
+				slope = model.getSlope(userRouteLayer);
+				accidentCount = model.getNumIntersects(userRouteLayer, accidentLayer);
+				pollutionPercentage = model.getPollutedPercentage(userRouteLayer, pollutionLayer);
+				//double routeLen = model.getRouteLen(userRouteLayer);
+				//int roundedLength = (int)routeLen;
+				//int v = model.getNumIntersects(userRouteLayer, accidentLayer);
+				//int p = model.getPollutedPercentage(userRouteLayer, pollutionLayer);
+				//double s = model.getSlope(userRouteLayer);
 				view.zoomToLayer(userRouteLayer);
-				double routeLen = model.getRouteLen(userRouteLayer);
-				int roundedAnswer = (int)routeLen;
-				int v = model.getNumIntersects(userRouteLayer, accidentLayer);
-				view.displayErrorMessage("Length of route: " + roundedAnswer + " meters; Number of accident sites: " + v);
-				
+				model.resetRouteStyle(userRouteLayer);
+				view.refreshMap();
+				//view.enableReportBtn();
+				//view.displayReport(userRouteFileName, roundedLength, v, p, s);
+			} else if(source.equals("View report")) {
+				view.displayReport(userRouteFileName, routeLength, accidentCount, pollutionPercentage, slope);
+			} else if (source.equals("Zoom to study area")) {
+				view.zoomToLayer(accidentLayer);
 			}
 		}
 	}

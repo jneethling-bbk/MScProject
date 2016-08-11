@@ -5,7 +5,7 @@ import org.geotools.ows.ServiceException;
 
 public class App {
     
-	public static void main( String[] args ) throws ServiceException, IOException {
+	public static void main( String[] args ) {
 		
 		App app = new App();		
 		MapModel model = new MapModel();
