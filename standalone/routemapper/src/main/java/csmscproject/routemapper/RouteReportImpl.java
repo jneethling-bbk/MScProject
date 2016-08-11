@@ -9,14 +9,14 @@ public class RouteReportImpl implements RouteReport {
 	private Integer pollutionPercentage;
 	
 	public void setRouteFileName(String routeFileName) {
-		//if (routeFileName == null) {
-			//throw new IllegalArgumentException("The name of the route cannot be null");
-		//}
+		if (routeFileName == null) {
+			throw new IllegalArgumentException("The name of the route cannot be null");
+		}
 		this.routeFileName = routeFileName;
 	}
 
-	public void setRouteLength(Integer routeLength) throws IllegalArgumentException {
-		//if (routeLength <= 0) {
+	public void setRouteLength(Integer routeLength) {
+		//if (routeLength <= 0 || routeLength == null) {
 			//throw new IllegalArgumentException("The lenght of the route must be more than zero");
 		//}
 		this.routeLength = routeLength;		
