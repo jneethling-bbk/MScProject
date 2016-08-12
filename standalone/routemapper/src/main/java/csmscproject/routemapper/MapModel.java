@@ -155,6 +155,7 @@ public class MapModel {
 		return layer;
 	}
 	public void resetRouteStyle(FeatureLayer routeLayer) {
+		
 		routeLayer.setStyle(createLineStyle(Color.GREEN));
 	}
 	

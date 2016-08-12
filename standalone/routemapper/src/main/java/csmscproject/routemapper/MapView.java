@@ -1,7 +1,5 @@
 package csmscproject.routemapper;
 
-import java.awt.BorderLayout;
-import java.awt.FlowLayout;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.text.DecimalFormat;
@@ -137,7 +135,7 @@ public class MapView {
 		
 	public void addLayer(FeatureLayer layer) {
 		mapcontent.addLayer(layer);
-		myPane.repaint();	
+		//myPane.repaint();	
 	}
 	
 	public void removeLayer(FeatureLayer layer) {
@@ -202,7 +200,7 @@ public class MapView {
 		return polPercentageAllowed.getValue();
 	}
 	
-	void displayReport(String fileName, int length, int intersects, int percentage, double slope) {
+	void displayReport(RouteReport report) {
 		//FlowLayout flo = new FlowLayout();
 		DecimalFormat df2 = new DecimalFormat(".#");
 		
@@ -212,17 +210,17 @@ public class MapView {
         reportFrame.setSize(350, 150);
 		
 		//String[] bits = s.split(";");
-        String l1S = "Route file evaluated: " + fileName;
+        String l1S = "Route file evaluated: " + report.getRouteFileName();
         
         int n = l1S.length();
         char[] chars = new char[n];
         Arrays.fill(chars, '=');
         String divString = new String(chars);
         
-        String l2S = "Length of route: " + length + "meters";
-        String l3S = "Average gradient of route: " + df2.format(slope) + "%";
-        String l4S = "Number of accident hotspots on route: " + intersects;
-        String l5S = "Percentage of route severely polluted: " + percentage + "%";
+        String l2S = "Length of route: " + report.getRouteLength() + " meters";
+        String l3S = "Average gradient of route: " + df2.format(report.getSlope()) + "%";
+        String l4S = "Number of accident hotspots on route: " + report.getAccidentCount();
+        String l5S = "Percentage of route severely polluted: " + report.getPollutionPercentage() + "%";
 		
         JLabel l1 = new JLabel(l1S);
         JLabel div = new JLabel(divString);
@@ -292,6 +290,6 @@ public class MapView {
 		BoundingBox inbounds = layer.getBounds();
 		((Envelope) inbounds).expandBy(500);
 		myPane.setDisplayArea(inbounds);
-		myPane.repaint();
+		//myPane.repaint();
 	}
 }
