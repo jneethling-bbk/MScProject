@@ -8,11 +8,25 @@ public class RiskAppetiteTest {
 
 	private RiskAppetiteImpl testInstance;
 
+	@Test(expected = NullPointerException.class)
+	public void setMaxAccidentNullTest() {
+		
+		testInstance = new RiskAppetiteImpl();
+		testInstance.setMaxAccidentCount(null);
+	}
+	
 	@Test(expected = IllegalArgumentException.class)
 	public void setMaxAccidentCountNegativeTest() {
 		
 		testInstance = new RiskAppetiteImpl();
 		testInstance.setMaxAccidentCount(-1L);
+	}
+	
+	@Test(expected = NullPointerException.class)
+	public void setMaxPollutionPercentageNullTest() {
+		
+		testInstance = new RiskAppetiteImpl();
+		testInstance.setMaxPollutionPercentage(null);
 	}
 	
 	@Test(expected = IllegalArgumentException.class)

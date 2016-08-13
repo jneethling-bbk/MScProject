@@ -29,6 +29,13 @@ public class RouteReportTest {
 		testInstance.setRouteLength(-1L);
 	}
 	
+	@Test(expected = NullPointerException.class)
+	public void setSlopeNullTest() {
+		
+		testInstance = new RouteReportImpl();
+		testInstance.setSlope(null);
+	}
+	
 	@Test(expected = IllegalArgumentException.class)
 	public void setSlopeBigNegativeTest() {
 		
@@ -43,11 +50,25 @@ public class RouteReportTest {
 		testInstance.setSlope(101.0);
 	}
 	
+	@Test(expected = NullPointerException.class)
+	public void setAccidentCountNullTest() {
+		
+		testInstance = new RouteReportImpl();
+		testInstance.setAccidentCount(null);
+	}
+	
 	@Test(expected = IllegalArgumentException.class)
 	public void setAccidentCountNegativeTest() {
 		
 		testInstance = new RouteReportImpl();
 		testInstance.setAccidentCount(-1L);
+	}
+	
+	@Test(expected = NullPointerException.class)
+	public void setPollutionPercentageNullTest() {
+		
+		testInstance = new RouteReportImpl();
+		testInstance.setPollutionPercentage(null);
 	}
 	
 	@Test(expected = IllegalArgumentException.class)
