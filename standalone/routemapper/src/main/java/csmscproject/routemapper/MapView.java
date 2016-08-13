@@ -8,6 +8,7 @@ import java.util.List;
 
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -256,6 +257,13 @@ public class MapView {
             return null;
         }
         return file;
+	}
+	
+	File chooseXMLFile() {
+        final JFileChooser fc = new JFileChooser();
+        fc.showOpenDialog(null);
+        File inputFile = fc.getSelectedFile();
+        return inputFile;
 	}
 		
 	void addConnectAccidentListener(ActionListener listenForAccidentCon) {

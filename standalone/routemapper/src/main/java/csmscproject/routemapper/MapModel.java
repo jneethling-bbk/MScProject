@@ -7,6 +7,10 @@ import java.net.URL;
 import java.util.HashSet;
 import java.util.Set;
 
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
 import org.geotools.data.FileDataStore;
 import org.geotools.data.FileDataStoreFinder;
 import org.geotools.data.ows.Layer;
@@ -21,6 +25,7 @@ import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.simple.SimpleFeatureBuilder;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
 import org.geotools.geometry.jts.JTS;
+import org.geotools.geometry.jts.JTSFactoryFinder;
 import org.geotools.map.FeatureLayer;
 import org.geotools.map.WMSLayer;
 import org.geotools.ows.ServiceException;
@@ -43,9 +48,14 @@ import org.opengis.referencing.NoSuchAuthorityCodeException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.referencing.operation.MathTransform;
 import org.opengis.referencing.operation.TransformException;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
+import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.MultiLineString;
 import com.vividsolutions.jts.geom.MultiPolygon;
@@ -54,10 +64,13 @@ import com.vividsolutions.jts.geom.Polygon;
 
 public class MapModel {
 	
-    static StyleFactory styleFactory = CommonFactoryFinder.getStyleFactory();
-    static FilterFactory filterFactory = CommonFactoryFinder.getFilterFactory();
-	
-	public WMSLayer getBackdrop() throws ServiceException, IOException, NullPointerException {
+    private static StyleFactory styleFactory = CommonFactoryFinder.getStyleFactory();
+    private static FilterFactory filterFactory = CommonFactoryFinder.getFilterFactory();
+    private Document routeDoc;
+    private CoordinateReferenceSystem displayCRS;
+    private CoordinateReferenceSystem computationCRS;
+    
+    public WMSLayer getBackdrop() throws ServiceException, IOException, NullPointerException {
 		String wmsUrlString = "http://ows.terrestris.de/osm/service?Service=WMS&Version=1.1.1&Request=GetCapabilities";
 		String wmsLayerName = "OSM-WMS";
 		//String wmsUrlString = "http://129.206.228.72/cached/osm?Service=WMS&Version=1.1.1&Request=GetCapabilities";
@@ -75,6 +88,7 @@ public class MapModel {
         	}
         }
         WMSLayer displayLayer = new WMSLayer(wms, myLayer );
+        displayCRS = displayLayer.getCoordinateReferenceSystem();
         displayLayer.setTitle("Backdrop");
 		return displayLayer;
 	}
@@ -132,31 +146,81 @@ public class MapModel {
         return style;
     }
 	
-	public FeatureLayer getRouteLayer(File file, String layerTitle) throws IOException {
+	public FeatureLayer getRouteLayer(File file, String layerTitle) throws IOException, ParserConfigurationException, SAXException, FactoryException, MismatchedDimensionException, TransformException {
 
-		FileDataStore store = FileDataStoreFinder.getDataStore(file);
-		if (store == null) {
+		computationCRS = CRS.decode("EPSG:4326");
+		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+        routeDoc = dBuilder.parse(file);
+        routeDoc.getDocumentElement().normalize();
+        NodeList nList = routeDoc.getElementsByTagName("gx:coord");
+		if (nList.getLength() < 2) {
+			// Maybe create a custom exception
 			throw new IOException();
 		}
-		SimpleFeatureSource featureSource = store.getFeatureSource();
-		
-		// Feature type of the route layer must be lines!
-        Class<?> geomBinding = featureSource.getSchema().getGeometryDescriptor().getType().getBinding();
-        boolean isLine = geomBinding != null 
-                && (LineString.class.isAssignableFrom(geomBinding) ||
-                    MultiLineString.class.isAssignableFrom(geomBinding));
-        
-        if (!isLine) {
-            throw new IOException();
+        Coordinate[] coords = new Coordinate[nList.getLength()];
+        for (int i=0; i<nList.getLength(); i++) {
+        	Node nNode = nList.item(i);
+        	String raw = nNode.getTextContent();
+        	String[] arr = raw.split(" ");
+        	Coordinate c = new Coordinate(Double.parseDouble(arr[1]), Double.parseDouble(arr[0]));
+        	coords[i] = c;
         }
-		
-		FeatureLayer layer = new FeatureLayer(featureSource, createLineStyle(Color.DARK_GRAY));
-		layer.setTitle(layerTitle);
-		return layer;
+        GeometryFactory geometryFactory = JTSFactoryFinder.getGeometryFactory(null);
+        LineString line = geometryFactory.createLineString(coords);
+        MathTransform transform = CRS.findMathTransform(computationCRS, displayCRS, true);
+        Geometry transformedLine = JTS.transform(line, transform);
+        
+        SimpleFeatureTypeBuilder b = new SimpleFeatureTypeBuilder();
+        //set the name first
+        b.setName("Route");
+        //then add the geometry properties
+        b.setCRS(displayCRS); // set crs first
+        b.add("the_geom", MultiLineString.class); // then add geometry
+        //then build the type
+        final SimpleFeatureType ROUTE = b.buildFeatureType();
+        
+        SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(ROUTE);
+        featureBuilder.add(transformedLine);
+        SimpleFeature feature = featureBuilder.buildFeature(null);
+        DefaultFeatureCollection lineCollection = new DefaultFeatureCollection();
+        lineCollection.add(feature);
+        FeatureLayer layer = new FeatureLayer(lineCollection, createLineStyle(Color.DARK_GRAY));
+        layer.setTitle(layerTitle);
+        return layer;
+        
+//		// Old code
+//		FileDataStore store = FileDataStoreFinder.getDataStore(file);
+//		if (store == null) {
+//			throw new IOException();
+//		}
+//		SimpleFeatureSource featureSource = store.getFeatureSource();
+//		
+//		// Feature type of the route layer must be lines!
+//        Class<?> geomBinding = featureSource.getSchema().getGeometryDescriptor().getType().getBinding();
+//        boolean isLine = geomBinding != null 
+//                && (LineString.class.isAssignableFrom(geomBinding) ||
+//                    MultiLineString.class.isAssignableFrom(geomBinding));
+//        
+//        if (!isLine) {
+//            throw new IOException();
+//        }
+//		
+//		FeatureLayer layer = new FeatureLayer(featureSource, createLineStyle(Color.DARK_GRAY));
+//		layer.setTitle(layerTitle);
+//		return layer;
 	}
-	public void resetRouteStyle(FeatureLayer routeLayer) {
-		
-		routeLayer.setStyle(createLineStyle(Color.GREEN));
+	
+	
+	
+	public void resetRouteStyle(FeatureLayer routeLayer, RouteReport report, RiskAppetite appetite) {
+		Color color;
+		if(report.getAccidentCount() > appetite.getMaxAccidentCount() || report.getPollutionPercentage() > appetite.getMaxPollutionPercentage()) {
+			color = Color.RED;
+		} else {
+			color = Color.GREEN;
+		}
+		routeLayer.setStyle(createLineStyle(color));
 	}
 	
 	//Create a Style to draw the line features of the user route  
@@ -175,19 +239,11 @@ public class MapModel {
 
         return style;
     }
-    public int getNumIntersects(FeatureLayer userRouteLayer, FeatureLayer riskLayer) {
+    public int getNumIntersects(FeatureLayer userRouteLayer, FeatureLayer riskLayer) throws IOException {
     	int val = 0;
-		FeatureCollection lineCollection = null;
-		FeatureCollection polyCollection = null;
-        //CoordinateReferenceSystem crs = null;
-        
-		try {
-			lineCollection = userRouteLayer.getFeatureSource().getFeatures();
-			polyCollection = riskLayer.getFeatureSource().getFeatures();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+		FeatureCollection<?, ?> lineCollection = userRouteLayer.getFeatureSource().getFeatures();
+		FeatureCollection<?, ?> polyCollection = riskLayer.getFeatureSource().getFeatures();
+
 		Set<String> polyIds = new HashSet<String>();
 		
 	    SimpleFeatureIterator lineIterator = (SimpleFeatureIterator) lineCollection.features();
@@ -212,79 +268,49 @@ public class MapModel {
 	            		}
 	            	}
 	            	
-	            	} finally {
-	            		polyIterator.close();
+	            } finally {
+	            	polyIterator.close();
 	            }
-	    }
-	            
-	            //val = val + lines.getNumPoints();
-	            //Geometry test = lines.intersection(arg0);
-
+	        }
+	       
 	    } finally {
 	        lineIterator.close();
 	    }
     	val = polyIds.size();
-    	//for (String s : polyIds) {
-    		//System.out.println(s);
-    	//}
     	return val;
     }
     
-    public int getPollutedPercentage(FeatureLayer userRouteLayer, FeatureLayer riskLayer) {
+    public int getPollutedPercentage(FeatureLayer userRouteLayer, FeatureLayer riskLayer) throws NoSuchAuthorityCodeException, FactoryException, IOException, MismatchedDimensionException, TransformException {
     	int val = 0;
-		FeatureCollection lineCollection = null;
-		FeatureCollection polyCollection = null;
+		FeatureCollection<?, ?> lineCollection = userRouteLayer.getFeatureSource().getFeatures();
+		FeatureCollection<?, ?> polyCollection = riskLayer.getFeatureSource().getFeatures();
 		Geometry pollutedPart = null;
-        CoordinateReferenceSystem crs = null;
-		try {
-			crs = CRS.decode("EPSG:3857");
-		} catch (NoSuchAuthorityCodeException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} catch (FactoryException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
-        
-		try {
-			lineCollection = userRouteLayer.getFeatureSource().getFeatures();
-			polyCollection = riskLayer.getFeatureSource().getFeatures();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+        CoordinateReferenceSystem crs = CRS.decode("EPSG:3857");
+
 	    SimpleFeatureIterator lineIterator = (SimpleFeatureIterator) lineCollection.features();
 	    
 	    try {
 	        while( lineIterator.hasNext() ){
 	        	SimpleFeatureIterator polyIterator = (SimpleFeatureIterator) polyCollection.features();
 	        	SimpleFeature lineFeature = lineIterator.next();
-	        	//System.out.println(lineFeature.getID());
 	            MultiLineString lines = (MultiLineString) lineFeature.getDefaultGeometry();
 
 	            try {
 	            	while (polyIterator.hasNext()) {
 	            		SimpleFeature polyFeature = polyIterator.next();
-	            		//System.out.println(polyFeature.getID());
 	            		MultiPolygon polys = (MultiPolygon) polyFeature.getDefaultGeometry();
 	            		pollutedPart = lines.intersection(polys);
-
-	            	}
-	            	
-	            	} finally {
-	            		polyIterator.close();
+	            	}	            	
+	            } finally {
+	            	polyIterator.close();
 	            }
-	    }
-	            
-	            //val = val + lines.getNumPoints();
-	            //Geometry test = lines.intersection(arg0);
-
+	        }
 	    } finally {
 	        lineIterator.close();
 	    }
         SimpleFeatureTypeBuilder b = new SimpleFeatureTypeBuilder();
         //set the name
-        b.setName( "Route" );
+        b.setName("Route");
         //add some properties
         //b.add( "name", String.class );
         //b.add( "classification", Integer.class );
@@ -292,7 +318,7 @@ public class MapModel {
 
         //add a geometry property
         b.setCRS(crs); // set crs first
-        b.add( "the_geom", MultiLineString.class ); // then add geometry
+        b.add("the_geom", MultiLineString.class); // then add geometry
 
         //build the type
         final SimpleFeatureType ROUTE = b.buildFeatureType();
@@ -310,35 +336,19 @@ public class MapModel {
     	return val;
     }
 
-	public double getRouteLen(FeatureLayer userRouteLayer) {
+	public double getRouteLen(FeatureLayer userRouteLayer) throws NoSuchAuthorityCodeException, FactoryException, IOException, MismatchedDimensionException, TransformException {
 		double val = 0.0;
-		FeatureCollection lineCollection = null;
-        CoordinateReferenceSystem mapcrs = null;
-        CoordinateReferenceSystem measurecrs = null;
-        MathTransform transform = null;
-        Geometry startPTransformed = null;
-        Geometry endPTransformed = null;
+		FeatureCollection<?, ?> lineCollection = userRouteLayer.getFeatureSource().getFeatures();
+        CoordinateReferenceSystem mapcrs = CRS.decode("EPSG:3857");
+        CoordinateReferenceSystem measurecrs = CRS.decode("EPSG:27700");
+        MathTransform transform = CRS.findMathTransform(mapcrs, measurecrs, true);
+        //Geometry startPTransformed = null;
+        //Geometry endPTransformed = null;
         
-		try {
-			mapcrs = CRS.decode("EPSG:3857");
-			//measurecrs = CRS.decode("EPSG:4326");
-			measurecrs = CRS.decode("EPSG:27700");
-			transform = CRS.findMathTransform(mapcrs, measurecrs, true);
-		} catch (NoSuchAuthorityCodeException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} catch (FactoryException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}
         GeodeticCalculator gc = new GeodeticCalculator(measurecrs);
-		try {
-			lineCollection = userRouteLayer.getFeatureSource().getFeatures();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+
 	    SimpleFeatureIterator iterator = (SimpleFeatureIterator) lineCollection.features();
+	    
 	    try {
 	        while( iterator.hasNext() ){
 	            SimpleFeature feature = iterator.next();
@@ -350,27 +360,16 @@ public class MapModel {
 		            Point startP = lines[i].getStartPoint();
 		            Point endP = lines[i].getEndPoint();
 		            
-		            try {
-						startPTransformed = JTS.transform(startP, transform);
-						endPTransformed = JTS.transform(endP, transform);
-		        	    Coordinate start = startPTransformed.getCoordinate();
-		        	    Coordinate end = endPTransformed.getCoordinate();
-		        	    gc.setStartingPosition( JTS.toDirectPosition( start, measurecrs ) );
-		        	    gc.setDestinationPosition( JTS.toDirectPosition( end, measurecrs ) );
-		        	    
-					} catch (MismatchedDimensionException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					} catch (TransformException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					}
+		            Geometry startPTransformed = JTS.transform(startP, transform);
+		            Geometry endPTransformed = JTS.transform(endP, transform);
+		        	Coordinate start = startPTransformed.getCoordinate();
+		        	Coordinate end = endPTransformed.getCoordinate();
+		        	gc.setStartingPosition( JTS.toDirectPosition(start, measurecrs));
+		        	gc.setDestinationPosition( JTS.toDirectPosition(end, measurecrs));
 		                	    
 	        	    double distance = gc.getOrthodromicDistance();
-	        	    val = val + distance;
-	        	    
-	            }
-   	    
+	        	    val = val + distance;	        	    
+	            }   	    
 	        }
 	    }
 	    finally {
@@ -379,26 +378,36 @@ public class MapModel {
 		return val;
 	}
 	
-	public double getSlope(FeatureLayer userRouteLayer) {
-		double val = 0.0;
-		FeatureCollection lineCollection = null;
-		try {
-			lineCollection = userRouteLayer.getFeatureSource().getFeatures();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+	public double getSlope(FeatureLayer userRouteLayer) throws IOException, MismatchedDimensionException, NoSuchAuthorityCodeException, FactoryException, TransformException {
+		NodeList nList = routeDoc.getElementsByTagName("gx:coord");
+		if (nList.getLength() < 2) {
+			// Maybe create a custom exception
+			throw new IOException();
 		}
-	    SimpleFeatureIterator iterator = (SimpleFeatureIterator) lineCollection.features();
-	    try {
-	        while( iterator.hasNext() ){
-	            SimpleFeature feature = iterator.next();
-	            val = (Double) feature.getAttribute("slope");
-	        }
-	    } finally {
-		   iterator.close();
-	    }
-	        
+        
+		Node first = nList.item(0);
+        String firstRaw = first.getTextContent();
+    	String[] firstArr = firstRaw.split(" ");
+    	double startHeight = Double.parseDouble(firstArr[2]);
+        
+        Node last = nList.item(nList.getLength()-1);
+        String lastRaw = last.getTextContent();
+    	String[] lastArr = lastRaw.split(" ");
+    	double endHeight = Double.parseDouble(lastArr[2]);
+        
+    	double val = ((endHeight-startHeight)/getRouteLen(userRouteLayer)) * 100;
+
+//		FeatureCollection<?, ?> lineCollection = userRouteLayer.getFeatureSource().getFeatures();
+//
+//	    SimpleFeatureIterator iterator = (SimpleFeatureIterator) lineCollection.features();
+//	    try {
+//	        while( iterator.hasNext() ){
+//	            SimpleFeature feature = iterator.next();
+//	            val = (Double) feature.getAttribute("slope");
+//	        }
+//	    } finally {
+//		   iterator.close();
+//	    }	        
 		return val;
 	}
-
 }
