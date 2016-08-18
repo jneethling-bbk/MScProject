@@ -138,6 +138,7 @@ public class MapController {
 			userRouteFileName = file.getName();
 			try {
 				userRouteLayer = model.getRouteLayer(file, "Route");
+				view.zoomToLayer(userRouteLayer);
 			} catch (IOException e1) {
 				view.displayErrorMessage(FILE_ERROR_MSG);
 				return;
@@ -163,7 +164,7 @@ public class MapController {
 					view.removeLayer((FeatureLayer) l);
 				}
 			}
-			view.addLayer(userRouteLayer);	
+			view.addLayer(userRouteLayer);
 			view.enableEvaluateBtn();
 		}
 	}
@@ -194,7 +195,6 @@ public class MapController {
 			}
 			appetite.setMaxAccidentCount((long) view.getAllowedIntersects());
 			appetite.setMaxPollutionPercentage((long) view.getAllowedPercentage());
-			view.zoomToLayer(userRouteLayer);	
 			model.resetRouteStyle(userRouteLayer, report, appetite);
 			view.enableReportBtn();
 		}

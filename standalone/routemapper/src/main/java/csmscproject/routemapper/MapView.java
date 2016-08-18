@@ -16,7 +16,6 @@ import javax.swing.JPanel;
 import javax.swing.JSlider;
 import javax.swing.JToolBar;
 
-import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.map.FeatureLayer;
 import org.geotools.map.Layer;
 import org.geotools.map.MapContent;
@@ -25,74 +24,27 @@ import org.geotools.swing.JMapFrame;
 import org.geotools.swing.JMapPane;
 import org.geotools.swing.data.JFileDataStoreChooser;
 import org.opengis.geometry.BoundingBox;
-import org.opengis.referencing.crs.CoordinateReferenceSystem;
-
 import com.vividsolutions.jts.geom.Envelope;
 
 public class MapView {
 	
-	JMapFrame myFrame;
-	JMapPane myPane;
-	MapContent mapcontent;
-	CoordinateReferenceSystem myCRS;
-	WMSLayer backdrop;
-	ReferencedEnvelope outbounds;
-	JButton btn1;
-	JButton btn2;
-	JButton btn3;
-	JButton btn4;
-	JButton btn5;
-	JButton btn6;
-	JButton btn7;
-	JButton btn8;
-	JButton btn9;
-	JFrame appetiteFrame;
-	JSlider accIntersectsAllowed;
-	JSlider polPercentageAllowed;
+	private JMapFrame mapFrame;
+	private JMapPane mapPane;
+	private MapContent mapcontent;
+	private JButton connectTrafficBtn;
+	private JButton toggleTrafficBtn;
+	private JButton connectPollutionBtn;
+	private JButton togglePollutionBtn;
+	private JButton setRiskAppetiteBtn;
+	private JButton addRouteBtn;
+	private JButton evaluateRouteBtn;
+	private JButton viewReportBtn;
+	private JButton zoomToAreaBtn;
+	private JFrame appetiteFrame;
+	private JSlider accIntersectsAllowed;
+	private JSlider polPercentageAllowed;
 	
 	public MapView() {
-		mapcontent = new MapContent();
-		mapcontent.setTitle("Cycle route analysis client application");
-		myFrame = new JMapFrame(mapcontent);
-		myPane = myFrame.getMapPane();
-		myFrame.enableStatusBar(true);
-		myFrame.enableToolBar(true);
-		//myFrame.enableLayerTable(true);
-        JToolBar toolBar = myFrame.getToolBar();
-        btn1 = new JButton("Connect traffic risk");
-        toolBar.addSeparator();
-        toolBar.add(btn1);
-        btn2 = new JButton("Toggle traffic risk");
-        btn2.setEnabled(false);
-        toolBar.addSeparator();
-        toolBar.add(btn2);
-        btn3 = new JButton("Connect pollution risk");
-        toolBar.addSeparator();
-        toolBar.add(btn3);
-        btn4 = new JButton("Toggle pollution risk");
-        btn4.setEnabled(false);
-        toolBar.addSeparator();
-        toolBar.add(btn4);
-        btn5 = new JButton("Set risk appetite");
-        toolBar.addSeparator();
-        toolBar.add(btn5);
-        btn6 = new JButton("Add user route");
-        toolBar.addSeparator();
-        toolBar.add(btn6);
-        btn7 = new JButton("Evaluate user route");
-        btn7.setEnabled(false);
-        toolBar.addSeparator();
-        toolBar.add(btn7);
-        btn8 = new JButton("View report");
-        btn8.setEnabled(false);
-        toolBar.addSeparator();
-        toolBar.add(btn8);
-        btn9 = new JButton("Zoom to study area");
-        btn9.setEnabled(false);
-        toolBar.addSeparator();
-        toolBar.add(btn9);       
-        myFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        myFrame.setExtendedState(JFrame.MAXIMIZED_BOTH);
 
 		final int INTER_MIN = 0;
 		final int INTER_MAX = 20;
@@ -100,6 +52,47 @@ public class MapView {
 		final int PER_MIN = 0;
 		final int PER_MAX = 100;
 		final int PER_INIT = 50;
+		
+		mapcontent = new MapContent();
+		mapcontent.setTitle("Cycle route analysis client application");
+		mapFrame = new JMapFrame(mapcontent);
+		mapPane = mapFrame.getMapPane();
+		mapFrame.enableToolBar(true);
+        JToolBar toolBar = mapFrame.getToolBar();
+        connectTrafficBtn = new JButton("Connect traffic risk");
+        toolBar.addSeparator();
+        toolBar.add(connectTrafficBtn);
+        toggleTrafficBtn = new JButton("Toggle traffic risk");
+        toggleTrafficBtn.setEnabled(false);
+        toolBar.addSeparator();
+        toolBar.add(toggleTrafficBtn);
+        connectPollutionBtn = new JButton("Connect pollution risk");
+        toolBar.addSeparator();
+        toolBar.add(connectPollutionBtn);
+        togglePollutionBtn = new JButton("Toggle pollution risk");
+        togglePollutionBtn.setEnabled(false);
+        toolBar.addSeparator();
+        toolBar.add(togglePollutionBtn);
+        setRiskAppetiteBtn = new JButton("Set risk appetite");
+        toolBar.addSeparator();
+        toolBar.add(setRiskAppetiteBtn);
+        addRouteBtn = new JButton("Add user route");
+        toolBar.addSeparator();
+        toolBar.add(addRouteBtn);
+        evaluateRouteBtn = new JButton("Evaluate user route");
+        evaluateRouteBtn.setEnabled(false);
+        toolBar.addSeparator();
+        toolBar.add(evaluateRouteBtn);
+        viewReportBtn = new JButton("View report");
+        viewReportBtn.setEnabled(false);
+        toolBar.addSeparator();
+        toolBar.add(viewReportBtn);
+        zoomToAreaBtn = new JButton("Zoom to study area");
+        zoomToAreaBtn.setEnabled(false);
+        toolBar.addSeparator();
+        toolBar.add(zoomToAreaBtn);       
+        mapFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        mapFrame.setExtendedState(JFrame.MAXIMIZED_BOTH);
 		
 		appetiteFrame = new JFrame("Set risk appetite parameters");
 		appetiteFrame.setSize(400, 200);
@@ -130,13 +123,18 @@ public class MapView {
 		appetiteFrame.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
 		
 	}
+	
+	public void displayMap(WMSLayer backdrop) {  
+		mapcontent.addLayer(backdrop);
+		mapFrame.setVisible(true);
+	}
+	
 	public List<Layer> getLayerList() {
 		return mapcontent.layers();
 	}
 		
 	public void addLayer(FeatureLayer layer) {
-		mapcontent.addLayer(layer);
-		//myPane.repaint();	
+		mapcontent.addLayer(layer);	
 	}
 	
 	public void removeLayer(FeatureLayer layer) {
@@ -151,66 +149,49 @@ public class MapView {
 		riskLayer.setVisible(false);
 	}
 	
-	public void displayMap(WMSLayer backdrop) {
-		this.backdrop = backdrop;
-		myCRS = backdrop.getCoordinateReferenceSystem();    
-		mapcontent.addLayer(backdrop);
-		//ReferencedEnvelope tempbounds = backdrop.getBounds();
-		//outbounds = new ReferencedEnvelope(tempbounds.getMinX()/24, tempbounds.getMaxX()/24, tempbounds.getMinY()/26, tempbounds.getMaxY()/12, myCRS);
-		//myPane.setDisplayArea(outbounds);
-		myFrame.setVisible(true);
-	}
-	
-	public int getAccSlider() {
-		return accIntersectsAllowed.getValue();
-	}
-	
-	public int getPolSlider() {
-		return polPercentageAllowed.getValue();
-	}
-	
-	public void refreshMap() {
-		myPane.repaint();
-	}
 	public void enableAccidentToggler() {
-		btn2.setEnabled(true);
+		toggleTrafficBtn.setEnabled(true);
 	}
+	
 	public void enablePollutionToggler() {
-		btn4.setEnabled(true);
-	}	
+		togglePollutionBtn.setEnabled(true);
+	}
+	
 	public void enableEvaluateBtn() {
-		btn7.setEnabled(true);
+		evaluateRouteBtn.setEnabled(true);
 	}
+	
 	public void enableReportBtn() {
-		btn8.setEnabled(true);
+		viewReportBtn.setEnabled(true);
 	}
+	
 	public void enableZoomBtn() {
-		btn9.setEnabled(true);
+		zoomToAreaBtn.setEnabled(true);
 	}
 	
 	void displayErrorMessage(String errorMessage){
-		JOptionPane.showMessageDialog(myFrame, errorMessage);
+		JOptionPane.showMessageDialog(mapFrame, errorMessage);
 	}
+	
 	void setRiskAppetite() {
 		appetiteFrame.setVisible(true);	
 	}
+	
 	public int getAllowedIntersects() {
 		return accIntersectsAllowed.getValue();
 	}
+	
 	public int getAllowedPercentage() {
 		return polPercentageAllowed.getValue();
 	}
 	
-	void displayReport(RouteReport report) {
-		//FlowLayout flo = new FlowLayout();
+	public void displayReport(RouteReport report) {
 		DecimalFormat df2 = new DecimalFormat(".#");
 		
 		JFrame reportFrame = new JFrame("User route evaluation report");
 		reportFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        //reportFrame.setLayout(flo);
         reportFrame.setSize(350, 150);
 		
-		//String[] bits = s.split(";");
         String l1S = "Route file evaluated: " + report.getRouteFileName();
         
         int n = l1S.length();
@@ -230,16 +211,10 @@ public class MapView {
 		JLabel l4 = new JLabel(l4S);
 		JLabel l5 = new JLabel(l5S);
 		
-		//JTextArea report = new JTextArea(4, 20);
-		//report.append(bits[0] + "\n");
-		//report.append(bits[1] + "\n");
-		//report.append(bits[2] + "\n");
 		JPanel reportPanel = new JPanel();
 		BoxLayout box2 = new BoxLayout(reportPanel, BoxLayout.Y_AXIS);
 		reportPanel.setLayout(box2);
-		
-		//reportPanel.add(report);
-		
+
 		reportPanel.add(l1);
 		reportPanel.add(div);
 		reportPanel.add(l2);
@@ -248,10 +223,15 @@ public class MapView {
 		reportPanel.add(l5);
 		reportFrame.add(reportPanel);
 		reportFrame.setVisible(true);
-
+	}
+		
+	public void zoomToLayer(FeatureLayer layer) {
+		BoundingBox inbounds = layer.getBounds();
+		((Envelope) inbounds).expandBy(500);
+		mapPane.setDisplayArea(inbounds);
 	}
 	
-	File chooseFile() {
+	public File chooseFile() {
         File file = JFileDataStoreChooser.showOpenFile("shp", null);
         if (file == null) {
             return null;
@@ -259,45 +239,46 @@ public class MapView {
         return file;
 	}
 	
-	File chooseXMLFile() {
+	public File chooseXMLFile() {
         final JFileChooser fc = new JFileChooser();
         fc.showOpenDialog(null);
         File inputFile = fc.getSelectedFile();
         return inputFile;
 	}
 		
-	void addConnectAccidentListener(ActionListener listenForAccidentCon) {
-		btn1.addActionListener(listenForAccidentCon);
-	}
-	void addToggleAccidentListener(ActionListener listenForAccidentToggle) {
-		btn2.addActionListener(listenForAccidentToggle);
-	}
-	void addConnectPollutionListener(ActionListener listenForPollutionCon) {
-		btn3.addActionListener(listenForPollutionCon);
-	}
-	void addTogglePollutionListener(ActionListener listenForPollutionToggle) {
-		btn4.addActionListener(listenForPollutionToggle);
-	}
-	void addRiskAppetiteListener(ActionListener listenForRiskAppetite) {
-		btn5.addActionListener(listenForRiskAppetite);
-	}
-	void addUserRouteListener(ActionListener listenForAddUserRoute) {
-		btn6.addActionListener(listenForAddUserRoute);
-	}
-	void addEvaluateListener(ActionListener listenForRouteEval) {
-		btn7.addActionListener(listenForRouteEval);
-	}
-	void addReportListener(ActionListener listenForViewReport) {
-		btn8.addActionListener(listenForViewReport);
-	}
-	void addZoomSAreaListener(ActionListener listenForZoomToSArea) {
-		btn9.addActionListener(listenForZoomToSArea);
+	public void addConnectAccidentListener(ActionListener listenForAccidentCon) {
+		connectTrafficBtn.addActionListener(listenForAccidentCon);
 	}
 	
-	public void zoomToLayer(FeatureLayer layer) {
-		BoundingBox inbounds = layer.getBounds();
-		((Envelope) inbounds).expandBy(500);
-		myPane.setDisplayArea(inbounds);
-		//myPane.repaint();
+	public void addToggleAccidentListener(ActionListener listenForAccidentToggle) {
+		toggleTrafficBtn.addActionListener(listenForAccidentToggle);
+	}
+	
+	public void addConnectPollutionListener(ActionListener listenForPollutionCon) {
+		connectPollutionBtn.addActionListener(listenForPollutionCon);
+	}
+	
+	public void addTogglePollutionListener(ActionListener listenForPollutionToggle) {
+		togglePollutionBtn.addActionListener(listenForPollutionToggle);
+	}
+	
+	public void addRiskAppetiteListener(ActionListener listenForRiskAppetite) {
+		setRiskAppetiteBtn.addActionListener(listenForRiskAppetite);
+	}
+	
+	public void addUserRouteListener(ActionListener listenForAddUserRoute) {
+		addRouteBtn.addActionListener(listenForAddUserRoute);
+	}
+	
+	public void addEvaluateListener(ActionListener listenForRouteEval) {
+		evaluateRouteBtn.addActionListener(listenForRouteEval);
+	}
+	
+	public void addReportListener(ActionListener listenForViewReport) {
+		viewReportBtn.addActionListener(listenForViewReport);
+	}
+	
+	public void addZoomSAreaListener(ActionListener listenForZoomToSArea) {
+		zoomToAreaBtn.addActionListener(listenForZoomToSArea);
 	}
 }

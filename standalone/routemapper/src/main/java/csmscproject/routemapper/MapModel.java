@@ -11,6 +11,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import org.geotools.data.FeatureSource;
 import org.geotools.data.FileDataStore;
 import org.geotools.data.FileDataStoreFinder;
 import org.geotools.data.ows.Layer;
@@ -36,9 +37,12 @@ import org.geotools.styling.Fill;
 import org.geotools.styling.LineSymbolizer;
 import org.geotools.styling.PolygonSymbolizer;
 import org.geotools.styling.Rule;
+import org.geotools.styling.SLDParser;
 import org.geotools.styling.Stroke;
 import org.geotools.styling.Style;
 import org.geotools.styling.StyleFactory;
+import org.geotools.swing.dialog.JExceptionReporter;
+import org.geotools.swing.styling.JSimpleStyleDialog;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.filter.FilterFactory;
@@ -66,6 +70,7 @@ public class MapModel {
 	
     private static StyleFactory styleFactory = CommonFactoryFinder.getStyleFactory();
     private static FilterFactory filterFactory = CommonFactoryFinder.getFilterFactory();
+    
     private Document routeDoc;
     private CoordinateReferenceSystem displayCRS;
     private CoordinateReferenceSystem computationCRS;
@@ -113,10 +118,10 @@ public class MapModel {
                     MultiPolygon.class.isAssignableFrom(geomBinding));
         
         if (!isPolygon) {
-            throw new IOException();
+        	// Maybe create a custom exception
+        	throw new IOException();
         }
-		
-		FeatureLayer layer = new FeatureLayer(featureSource, createPolygonStyle(color));
+        FeatureLayer layer = new FeatureLayer(featureSource, createPolygonStyle(color));
 		layer.setTitle(layerTitle);
 		return layer;
 	}
@@ -188,30 +193,7 @@ public class MapModel {
         FeatureLayer layer = new FeatureLayer(lineCollection, createLineStyle(Color.DARK_GRAY));
         layer.setTitle(layerTitle);
         return layer;
-        
-//		// Old code
-//		FileDataStore store = FileDataStoreFinder.getDataStore(file);
-//		if (store == null) {
-//			throw new IOException();
-//		}
-//		SimpleFeatureSource featureSource = store.getFeatureSource();
-//		
-//		// Feature type of the route layer must be lines!
-//        Class<?> geomBinding = featureSource.getSchema().getGeometryDescriptor().getType().getBinding();
-//        boolean isLine = geomBinding != null 
-//                && (LineString.class.isAssignableFrom(geomBinding) ||
-//                    MultiLineString.class.isAssignableFrom(geomBinding));
-//        
-//        if (!isLine) {
-//            throw new IOException();
-//        }
-//		
-//		FeatureLayer layer = new FeatureLayer(featureSource, createLineStyle(Color.DARK_GRAY));
-//		layer.setTitle(layerTitle);
-//		return layer;
 	}
-	
-	
 	
 	public void resetRouteStyle(FeatureLayer routeLayer, RouteReport report, RiskAppetite appetite) {
 		Color color;
@@ -239,6 +221,7 @@ public class MapModel {
 
         return style;
     }
+    
     public int getNumIntersects(FeatureLayer userRouteLayer, FeatureLayer riskLayer) throws IOException {
     	int val = 0;
 		FeatureCollection<?, ?> lineCollection = userRouteLayer.getFeatureSource().getFeatures();
@@ -258,8 +241,7 @@ public class MapModel {
 	            		SimpleFeature polyFeature = polyIterator.next();
 	            		MultiPolygon polys = (MultiPolygon) polyFeature.getDefaultGeometry();
 	            		int np = polys.getNumGeometries();
-	            		Polygon polyArray[] = new Polygon[np];
-	            		
+	            		Polygon polyArray[] = new Polygon[np];	            		
 	            		for ( int j = 0; j < np; j++ ) {
 	            			polyArray[j] = (Polygon) polys.getGeometryN(j);
 	            			if (lines.intersects(polyArray[j])) {
@@ -284,10 +266,13 @@ public class MapModel {
     	int val = 0;
 		FeatureCollection<?, ?> lineCollection = userRouteLayer.getFeatureSource().getFeatures();
 		FeatureCollection<?, ?> polyCollection = riskLayer.getFeatureSource().getFeatures();
-		Geometry pollutedPart = null;
-        CoordinateReferenceSystem crs = CRS.decode("EPSG:3857");
+		//Geometry pollutedPart = null;
 
 	    SimpleFeatureIterator lineIterator = (SimpleFeatureIterator) lineCollection.features();
+	    
+	    double polDist = 0.0;
+        MathTransform transform = CRS.findMathTransform(displayCRS, computationCRS, true);        
+        GeodeticCalculator gc = new GeodeticCalculator(computationCRS);
 	    
 	    try {
 	        while( lineIterator.hasNext() ){
@@ -299,7 +284,18 @@ public class MapModel {
 	            	while (polyIterator.hasNext()) {
 	            		SimpleFeature polyFeature = polyIterator.next();
 	            		MultiPolygon polys = (MultiPolygon) polyFeature.getDefaultGeometry();
-	            		pollutedPart = lines.intersection(polys);
+	            		
+	            		int np = polys.getNumGeometries();
+	            		Polygon polyArray[] = new Polygon[np];	            		
+	            		for ( int j = 0; j < np; j++ ) {
+	            			polyArray[j] = (Polygon) polys.getGeometryN(j);
+	            			if (lines.intersects(polyArray[j])) {
+	            				Geometry pollutedPart = lines.intersection(polyArray[j]);
+	            				polDist = polDist + getLineStringLength((LineString) pollutedPart);
+	            			}
+	            		}
+	            		
+	            		//Geometry pollutedPart = lines.intersection(polys);
 	            	}	            	
 	            } finally {
 	            	polyIterator.close();
@@ -308,29 +304,22 @@ public class MapModel {
 	    } finally {
 	        lineIterator.close();
 	    }
-        SimpleFeatureTypeBuilder b = new SimpleFeatureTypeBuilder();
-        //set the name
-        b.setName("Route");
-        //add some properties
-        //b.add( "name", String.class );
-        //b.add( "classification", Integer.class );
-        //b.add( "height", Double.class );
-
-        //add a geometry property
-        b.setCRS(crs); // set crs first
-        b.add("the_geom", MultiLineString.class); // then add geometry
-
-        //build the type
-        final SimpleFeatureType ROUTE = b.buildFeatureType();
-        
-        SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(ROUTE);
-        featureBuilder.add(pollutedPart);
-        SimpleFeature feature = featureBuilder.buildFeature(null);
-        DefaultFeatureCollection lineCollection1 = new DefaultFeatureCollection();
-        lineCollection1.add(feature);
-        //features.add(feature);
-        FeatureLayer nl = new FeatureLayer(lineCollection1, createLineStyle(Color.GRAY));
-        double polDist = getRouteLen(nl);
+//        SimpleFeatureTypeBuilder b = new SimpleFeatureTypeBuilder();
+//        //set the name
+//        b.setName("Route");
+//        //add a geometry property
+//        b.setCRS(displayCRS); // set crs first
+//        b.add("the_geom", MultiLineString.class); // then add geometry
+//        //build the type
+//        final SimpleFeatureType ROUTE = b.buildFeatureType();       
+//        SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(ROUTE);
+//        featureBuilder.add(pollutedPart);
+//        SimpleFeature feature = featureBuilder.buildFeature(null);
+//        DefaultFeatureCollection lineCollection1 = new DefaultFeatureCollection();
+//        lineCollection1.add(feature);
+//        
+//        FeatureLayer nl = new FeatureLayer(lineCollection1, createLineStyle(Color.GRAY));
+        //double polDist = getRouteLen(nl);
         double totDist = getRouteLen(userRouteLayer);
         val = (int) ((polDist/totDist) *100);
     	return val;
@@ -339,13 +328,9 @@ public class MapModel {
 	public double getRouteLen(FeatureLayer userRouteLayer) throws NoSuchAuthorityCodeException, FactoryException, IOException, MismatchedDimensionException, TransformException {
 		double val = 0.0;
 		FeatureCollection<?, ?> lineCollection = userRouteLayer.getFeatureSource().getFeatures();
-        CoordinateReferenceSystem mapcrs = CRS.decode("EPSG:3857");
-        CoordinateReferenceSystem measurecrs = CRS.decode("EPSG:27700");
-        MathTransform transform = CRS.findMathTransform(mapcrs, measurecrs, true);
-        //Geometry startPTransformed = null;
-        //Geometry endPTransformed = null;
-        
-        GeodeticCalculator gc = new GeodeticCalculator(measurecrs);
+		
+        MathTransform transform = CRS.findMathTransform(displayCRS, computationCRS, true);        
+        GeodeticCalculator gc = new GeodeticCalculator(computationCRS);
 
 	    SimpleFeatureIterator iterator = (SimpleFeatureIterator) lineCollection.features();
 	    
@@ -364,8 +349,8 @@ public class MapModel {
 		            Geometry endPTransformed = JTS.transform(endP, transform);
 		        	Coordinate start = startPTransformed.getCoordinate();
 		        	Coordinate end = endPTransformed.getCoordinate();
-		        	gc.setStartingPosition( JTS.toDirectPosition(start, measurecrs));
-		        	gc.setDestinationPosition( JTS.toDirectPosition(end, measurecrs));
+		        	gc.setStartingPosition( JTS.toDirectPosition(start, computationCRS));
+		        	gc.setDestinationPosition( JTS.toDirectPosition(end, computationCRS));
 		                	    
 	        	    double distance = gc.getOrthodromicDistance();
 	        	    val = val + distance;	        	    
@@ -395,19 +380,73 @@ public class MapModel {
     	String[] lastArr = lastRaw.split(" ");
     	double endHeight = Double.parseDouble(lastArr[2]);
         
-    	double val = ((endHeight-startHeight)/getRouteLen(userRouteLayer)) * 100;
-
-//		FeatureCollection<?, ?> lineCollection = userRouteLayer.getFeatureSource().getFeatures();
-//
-//	    SimpleFeatureIterator iterator = (SimpleFeatureIterator) lineCollection.features();
-//	    try {
-//	        while( iterator.hasNext() ){
-//	            SimpleFeature feature = iterator.next();
-//	            val = (Double) feature.getAttribute("slope");
-//	        }
-//	    } finally {
-//		   iterator.close();
-//	    }	        
+    	double val = ((endHeight-startHeight)/getRouteLen(userRouteLayer)) * 100;        
 		return val;
 	}
+	
+	private double getLineStringLength(LineString line) throws FactoryException, MismatchedDimensionException, TransformException {
+        MathTransform transform = CRS.findMathTransform(displayCRS, computationCRS, true);        
+        GeodeticCalculator gc = new GeodeticCalculator(computationCRS);
+        Point startP = line.getStartPoint();
+        Point endP = line.getEndPoint();       
+        Geometry startPTransformed = JTS.transform(startP, transform);
+        Geometry endPTransformed = JTS.transform(endP, transform);
+    	Coordinate start = startPTransformed.getCoordinate();
+    	Coordinate end = endPTransformed.getCoordinate();
+    	gc.setStartingPosition( JTS.toDirectPosition(start, computationCRS));
+    	gc.setDestinationPosition( JTS.toDirectPosition(end, computationCRS));        
+		return gc.getOrthodromicDistance();
+	}
+	
+    /**
+     * Create a Style to display the features. If an SLD file is in the same
+     * directory as the shapefile then we will create the Style by processing
+     * this. Otherwise we display a JSimpleStyleDialog to prompt the user for
+     * preferences.
+     */
+    
+	//private Style createStyle(File file, FeatureSource featureSource) {
+    private Style createStyle(File file) {
+        File sld = toSLDFile(file);
+        //if (sld != null) {
+            return createFromSLD(sld);
+        //}
+
+        //SimpleFeatureType schema = (SimpleFeatureType)featureSource.getSchema();
+        //return JSimpleStyleDialog.showDialog(null, schema);
+    }
+    
+    /**
+     * Figure out if a valid SLD file is available.
+     */
+    public File toSLDFile(File file)  {
+        String path = file.getAbsolutePath();
+        String base = path.substring(0,path.length()-4);
+        String newPath = base + ".sld";
+        File sld = new File( newPath );
+        if( sld.exists() ){
+            return sld;
+        }
+        newPath = base + ".SLD";
+        sld = new File( newPath );
+        if( sld.exists() ){
+            return sld;
+        }
+        return null;
+    }
+
+    /**
+     * Create a Style object from a definition in a SLD document
+     */
+    private Style createFromSLD(File sld) {
+        try {
+            SLDParser stylereader = new SLDParser(styleFactory, sld.toURI().toURL());
+            Style[] style = stylereader.readXML();
+            return style[0];
+            
+        } catch (Exception e) {
+            JExceptionReporter.showDialog(e, "Problem creating style");
+        }
+        return null;
+    }
 }
