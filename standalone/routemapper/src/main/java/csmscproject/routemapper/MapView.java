@@ -215,7 +215,7 @@ public class MapView {
 	}
 	
 	public void displayReport(RouteReport report) {
-		DecimalFormat df2 = new DecimalFormat(".#");
+		DecimalFormat df2 = new DecimalFormat(".##");
 		
 		JFrame reportFrame = new JFrame("User route evaluation report");
 		reportFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -260,7 +260,7 @@ public class MapView {
 		mapPane.setDisplayArea(inbounds);
 	}
 	
-	public File chooseFile() {
+	public File chooseShapeFile() {
         File file = JFileDataStoreChooser.showOpenFile("shp", null);
         if (file == null) {
             return null;
@@ -268,11 +268,15 @@ public class MapView {
         return file;
 	}
 	
-	public File chooseXMLFile() {
+	public File chooseGenericFile() {
         final JFileChooser fc = new JFileChooser();
         fc.showOpenDialog(null);
         File inputFile = fc.getSelectedFile();
         return inputFile;
+	}
+	
+	public void addConnectDEMListener(ActionListener listenForDEMCon) {
+		connectDEM.addActionListener(listenForDEMCon);
 	}
 		
 	public void addConnectAccidentListener(ActionListener listenForAccidentCon) {

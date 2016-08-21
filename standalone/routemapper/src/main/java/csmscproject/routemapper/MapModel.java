@@ -11,6 +11,11 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import org.geotools.coverage.grid.GridCoverage2D;
+import org.geotools.coverage.grid.io.AbstractGridFormat;
+import org.geotools.coverage.grid.io.GridCoverage2DReader;
+import org.geotools.coverage.grid.io.GridFormatFinder;
+import org.geotools.coverage.processing.Operations;
 import org.geotools.data.FeatureSource;
 import org.geotools.data.FileDataStore;
 import org.geotools.data.FileDataStoreFinder;
@@ -46,6 +51,7 @@ import org.geotools.swing.styling.JSimpleStyleDialog;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.filter.FilterFactory;
+import org.opengis.geometry.DirectPosition;
 import org.opengis.geometry.MismatchedDimensionException;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.NoSuchAuthorityCodeException;
@@ -97,6 +103,15 @@ public class MapModel {
         displayLayer.setTitle("Backdrop");
 		return displayLayer;
 	}
+    
+    public GridCoverage2D getDEM(File file) throws IOException, NoSuchAuthorityCodeException, FactoryException {
+    	AbstractGridFormat format = GridFormatFinder.findFormat(file);
+    	GridCoverage2DReader reader = format.getReader(file);
+    	GridCoverage2D coverage = reader.read(null);
+    	return coverage;
+    	//CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:3857");
+    	//return (GridCoverage2D) Operations.DEFAULT.resample(coverage,targetCRS);
+    }
 		
 	public FeatureLayer getRiskLayer(File file, String layerTitle) throws IOException {
 		Color color;
@@ -157,22 +172,48 @@ public class MapModel {
 		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
         routeDoc = dBuilder.parse(file);
-        routeDoc.getDocumentElement().normalize();
-        NodeList nList = routeDoc.getElementsByTagName("gx:coord");
-		if (nList.getLength() < 2) {
+        routeDoc.getDocumentElement().normalize();       
+        NodeList nList = routeDoc.getElementsByTagName("coordinates");
+		if (nList.getLength() < 1) {
 			// Maybe create a custom exception
 			throw new IOException();
 		}
-        Coordinate[] coords = new Coordinate[nList.getLength()];
-        for (int i=0; i<nList.getLength(); i++) {
-        	Node nNode = nList.item(i);
-        	String raw = nNode.getTextContent();
-        	String[] arr = raw.split(" ");
-        	Coordinate c = new Coordinate(Double.parseDouble(arr[1]), Double.parseDouble(arr[0]));
-        	coords[i] = c;
-        }
+		Node cNode = nList.item(0);
+		String raw = cNode.getTextContent();
+		String[] masterArray = raw.split(" ");
+		Coordinate[] tempcoords = new Coordinate[masterArray.length];
+		int index = 0;
+		for (String s : masterArray) {
+			String[] subArray = s.split(",");
+			
+			if (subArray.length > 2 && isNumeric(subArray[1]) && isNumeric(subArray[0])) {
+				Coordinate c = new Coordinate(Double.parseDouble(subArray[1]), Double.parseDouble(subArray[0]));
+				tempcoords[index] = c;
+				index++;
+			}
+		}
+		Coordinate[] coords = new Coordinate[index];
+		for (int n=0; n<index; n++) {
+			coords[n] = tempcoords[n];
+		}
+				
+//        Coordinate[] coords = new Coordinate[nList.getLength()];
+//        for (int i=0; i<nList.getLength(); i++) {
+//        	Node nNode = nList.item(i);
+//        	String raw = nNode.getTextContent();
+//        	String[] arr = raw.split(" ");
+//        	Coordinate c = new Coordinate(Double.parseDouble(arr[1]), Double.parseDouble(arr[0]));
+//        	coords[i] = c;
+//        }
+        
         GeometryFactory geometryFactory = JTSFactoryFinder.getGeometryFactory(null);
         LineString line = geometryFactory.createLineString(coords);
+        
+//        for (int n=0; n<line.getNumPoints(); n++) {
+//        	Point p = line.getPointN(n);
+//        	Coordinate c = p.getCoordinate();
+//        	System.out.println("X: " + c.x + " Y: " + c.y );
+//        }
         MathTransform transform = CRS.findMathTransform(computationCRS, displayCRS, true);
         Geometry transformedLine = JTS.transform(line, transform);
         
@@ -363,24 +404,51 @@ public class MapModel {
 		return val;
 	}
 	
-	public double getSlope(FeatureLayer userRouteLayer) throws IOException, MismatchedDimensionException, NoSuchAuthorityCodeException, FactoryException, TransformException {
-		NodeList nList = routeDoc.getElementsByTagName("gx:coord");
-		if (nList.getLength() < 2) {
-			// Maybe create a custom exception
-			throw new IOException();
-		}
+	public double getSlope(FeatureLayer userRouteLayer, GridCoverage2D dem) throws IOException, MismatchedDimensionException, NoSuchAuthorityCodeException, FactoryException, TransformException {
+		MathTransform transform = CRS.findMathTransform(displayCRS, computationCRS, true);
+		FeatureCollection<?, ?> lineCollection = userRouteLayer.getFeatureSource().getFeatures();
+		SimpleFeatureIterator lineIterator = (SimpleFeatureIterator) lineCollection.features();
+		LineString firstLine = null;
+		LineString lastLine = null;
+		try {
+	        while(lineIterator.hasNext()) {
+	        	SimpleFeature lineFeature = lineIterator.next();
+	        	MultiLineString mLine = (MultiLineString) lineFeature.getDefaultGeometry();
+	            int n = mLine.getNumGeometries();
+	            firstLine = (LineString) mLine.getGeometryN(0);
+	            lastLine = (LineString) mLine.getGeometryN(n-1);
+	        }
+	    } finally {
+	    	lineIterator.close();
+	    }
+	    Point startP = firstLine.getStartPoint();    		
+	    Point endP = lastLine.getEndPoint();
+	    Geometry startPTransformed = JTS.transform(startP, transform);
+	    Geometry endPTransformed = JTS.transform(endP, transform);
+	    Coordinate startC = startPTransformed.getCoordinate();
+	    Coordinate endC = endPTransformed.getCoordinate();
+	    
+	    // Sunday - must get a DirectPosition from a Geometry
+	    float[] startHeight = (float[]) (dem.evaluate(JTS.toDirectPosition(startC, computationCRS)));
+	    float[] endHeight = (float[]) (dem.evaluate(JTS.toDirectPosition(endC, computationCRS)));
+		
+//		NodeList nList = routeDoc.getElementsByTagName("gx:coord");
+//		if (nList.getLength() < 2) {
+//			// Maybe create a custom exception
+//			throw new IOException();
+//		}
+//        
+//		Node first = nList.item(0);
+//        String firstRaw = first.getTextContent();
+//    	String[] firstArr = firstRaw.split(" ");
+//    	double startHeight = Double.parseDouble(firstArr[2]);
+//        
+//        Node last = nList.item(nList.getLength()-1);
+//        String lastRaw = last.getTextContent();
+//    	String[] lastArr = lastRaw.split(" ");
+//    	double endHeight = Double.parseDouble(lastArr[2]);
         
-		Node first = nList.item(0);
-        String firstRaw = first.getTextContent();
-    	String[] firstArr = firstRaw.split(" ");
-    	double startHeight = Double.parseDouble(firstArr[2]);
-        
-        Node last = nList.item(nList.getLength()-1);
-        String lastRaw = last.getTextContent();
-    	String[] lastArr = lastRaw.split(" ");
-    	double endHeight = Double.parseDouble(lastArr[2]);
-        
-    	double val = ((endHeight-startHeight)/getRouteLen(userRouteLayer)) * 100;        
+    	double val = ((endHeight[0]-startHeight[0])/getRouteLen(userRouteLayer)) * 100;        
 		return val;
 	}
 	
@@ -397,6 +465,25 @@ public class MapModel {
     	gc.setDestinationPosition( JTS.toDirectPosition(end, computationCRS));        
 		return gc.getOrthodromicDistance();
 	}
+	
+    public static boolean isNumeric(String str) {  
+      try {  
+        double d = Double.parseDouble(str);  
+      } catch(NumberFormatException nfe) {  
+        return false;  
+      }  
+      return true;  
+    }
+    
+    public static boolean coordinateIsValid(Coordinate c) {
+    	try {
+    		double x = c.x;
+    		double y = c.y;
+    	} catch (NullPointerException e) {
+    		return false;
+    	}
+    	return true;
+    }
 	
     /**
      * Create a Style to display the features. If an SLD file is in the same

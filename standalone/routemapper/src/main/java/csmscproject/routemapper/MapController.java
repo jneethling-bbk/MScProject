@@ -8,6 +8,7 @@ import java.util.List;
 
 import javax.xml.parsers.ParserConfigurationException;
 
+import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.map.FeatureLayer;
 import org.geotools.map.Layer;
 import org.geotools.map.WMSLayer;
@@ -22,6 +23,7 @@ public class MapController {
 
 	private MapModel model;
 	private MapView view;
+	private GridCoverage2D dem;
 	private FeatureLayer accidentLayer;
 	private FeatureLayer pollutionLayer;
 	private FeatureLayer userRouteLayer;
@@ -37,6 +39,7 @@ public class MapController {
 		this.model = model;
 		this.view = view;
 		
+		this.view.addConnectDEMListener(new DemConnectionListener());
 		this.view.addConnectAccidentListener(new AccidentConnectionListener());
 		this.view.addToggleAccidentListener(new AccidentToggleListener());
 		this.view.addConnectPollutionListener(new PollutionConnectionListener());
@@ -50,6 +53,7 @@ public class MapController {
 		report = new RouteReportImpl();
 		appetite = new RiskAppetiteImpl();
 		
+		dem = null;
 		accidentLayer = null;
 		pollutionLayer = null;
 		userRouteLayer = null;
@@ -62,9 +66,28 @@ public class MapController {
 		view.displayMap(backdrop);
 	}
 	
+	class DemConnectionListener implements ActionListener {
+		public void actionPerformed(ActionEvent e) {
+			File file = view.chooseGenericFile();
+			if (file == null) {return;}
+			try {
+				dem = model.getDEM(file);
+			} catch (NoSuchAuthorityCodeException e1) {
+				// can only be caused by a programming error
+				e1.printStackTrace();
+			} catch (IOException e1) {
+				view.displayErrorMessage(FILE_ERROR_MSG);
+				return;
+			} catch (FactoryException e1) {
+				// can only be caused by a programming error
+				e1.printStackTrace();
+			}
+		}
+	}
+	
 	class AccidentConnectionListener implements ActionListener {
 		public void actionPerformed(ActionEvent e) {
-			File file = view.chooseFile();
+			File file = view.chooseShapeFile();
 			if (file == null) {return;}
 			try {
 				accidentLayer = model.getRiskLayer(file, "Accidents");
@@ -86,7 +109,7 @@ public class MapController {
 	
 	class PollutionConnectionListener implements ActionListener {
 		public void actionPerformed(ActionEvent e) {
-			File file = view.chooseFile();
+			File file = view.chooseShapeFile();
 			if (file == null) {return;}
 			try {
 				pollutionLayer = model.getRiskLayer(file, "Pollution");
@@ -133,7 +156,7 @@ public class MapController {
 	
 	class UserRouteListener implements ActionListener {
 		public void actionPerformed(ActionEvent e) {
-			File file = view.chooseFile();
+			File file = view.chooseGenericFile();
 			if (file == null) {return;}
 			userRouteFileName = file.getName();
 			try {
@@ -174,7 +197,7 @@ public class MapController {
 			report.setRouteFileName(userRouteFileName);
 			try {
 				report.setRouteLength((long) model.getRouteLen(userRouteLayer));
-				report.setSlope(model.getSlope(userRouteLayer));
+				report.setSlope(model.getSlope(userRouteLayer, dem));
 				report.setAccidentCount((long) model.getNumIntersects(userRouteLayer, accidentLayer));
 				report.setPollutionPercentage((long) model.getPollutedPercentage(userRouteLayer, pollutionLayer));
 			} catch (MismatchedDimensionException e1) {
