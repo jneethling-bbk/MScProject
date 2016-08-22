@@ -5,6 +5,7 @@ import java.awt.event.ActionListener;
 
 import javax.swing.JButton;
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
 public class BuildView {
@@ -19,8 +20,10 @@ public class BuildView {
 		
 		connectPollutionGridBtn = new JButton("Connect interpolation grid");
 		generatePollutionModelBtn = new JButton("Generate air-pollution model");
+		generatePollutionModelBtn.setEnabled(false);
 		connectTrafficNetworkBtn = new JButton("Connect reference network");
 		generateTrafficModelBtn = new JButton("Generate traffic accident model");
+		generateTrafficModelBtn.setEnabled(false);
 		
 		GridLayout grid = new GridLayout(2, 2);
 		controlPanel = new JPanel();
@@ -41,6 +44,10 @@ public class BuildView {
 	
 	public void displayGUI() {
 		mainFrame.setVisible(true);
+	}
+	
+	void displayMessage(String message, String heading, int messageType){
+		JOptionPane.showMessageDialog(mainFrame, message, heading, messageType);
 	}
 	
 	public void addConnectPollutionGridBtnListener(ActionListener listenForConnectPollutionGridBtn) {

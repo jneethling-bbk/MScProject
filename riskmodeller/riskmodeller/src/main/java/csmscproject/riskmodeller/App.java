@@ -4,7 +4,8 @@ public class App {
     
 	public static void main(String[] args) {
         BuildView view = new BuildView();
-        BuildController controller = new BuildController(view);
+        BuildModel model = new BuildModel();
+        BuildController controller = new BuildController(view, model);
         controller.configureGUI();
     }
 }
