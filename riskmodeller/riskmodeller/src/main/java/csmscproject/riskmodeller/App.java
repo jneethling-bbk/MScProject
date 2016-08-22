@@ -3,8 +3,8 @@ package csmscproject.riskmodeller;
 public class App {
     
 	public static void main(String[] args) {
-        RiskView view = new RiskView();
-        RiskController controller = new RiskController(view);
+        BuildView view = new BuildView();
+        BuildController controller = new BuildController(view);
         controller.configureGUI();
     }
 }

@@ -1,23 +1,21 @@
 package csmscproject.riskmodeller;
 
 import java.awt.GridLayout;
+import java.awt.event.ActionListener;
 
-import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
-public class RiskView {
-
+public class BuildView {
 	private JFrame mainFrame;
 	private JPanel controlPanel;
-	private JPanel statusPanel;
 	private JButton connectPollutionGridBtn;
 	private JButton generatePollutionModelBtn;
 	private JButton connectTrafficNetworkBtn;
 	private JButton generateTrafficModelBtn;
 	
-	public RiskView() {
+	public BuildView() {
 		
 		connectPollutionGridBtn = new JButton("Connect interpolation grid");
 		generatePollutionModelBtn = new JButton("Generate air-pollution model");
@@ -43,5 +41,21 @@ public class RiskView {
 	
 	public void displayGUI() {
 		mainFrame.setVisible(true);
+	}
+	
+	public void addConnectPollutionGridBtnListener(ActionListener listenForConnectPollutionGridBtn) {
+		connectPollutionGridBtn.addActionListener(listenForConnectPollutionGridBtn);
+	}
+	
+	public void addGeneratePollutionModelBtnListener(ActionListener listenForGeneratePollutionModelBtn) {
+		generatePollutionModelBtn.addActionListener(listenForGeneratePollutionModelBtn);
+	}
+	
+	public void addConnectTrafficNetworkBtnListener(ActionListener listenForConnectTrafficNetworkBtn) {
+		connectTrafficNetworkBtn.addActionListener(listenForConnectTrafficNetworkBtn);
+	}
+	
+	public void addGenerateTrafficModelBtnListener(ActionListener listenForGenerateTrafficModelBtn) {
+		generateTrafficModelBtn.addActionListener(listenForGenerateTrafficModelBtn);
 	}
 }
