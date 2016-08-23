@@ -2,11 +2,15 @@ package csmscproject.riskmodeller;
 
 import java.awt.GridLayout;
 import java.awt.event.ActionListener;
+import java.io.File;
 
 import javax.swing.JButton;
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+
+import org.geotools.swing.data.JFileDataStoreChooser;
 
 public class BuildView {
 	private JFrame mainFrame;
@@ -46,8 +50,31 @@ public class BuildView {
 		mainFrame.setVisible(true);
 	}
 	
+	public void enableGeneratePollutionModelBtn() {
+		generatePollutionModelBtn.setEnabled(true);
+	}
+	
+	public void enableGenerateTrafficModelBtn() {
+		generateTrafficModelBtn.setEnabled(true);
+	}
+	
 	void displayMessage(String message, String heading, int messageType){
 		JOptionPane.showMessageDialog(mainFrame, message, heading, messageType);
+	}
+	
+	public File chooseShapeFile() {
+        File file = JFileDataStoreChooser.showOpenFile("shp", null);
+        if (file == null) {
+            return null;
+        }
+        return file;
+	}
+	
+	public File chooseGenericFile() {
+        final JFileChooser fc = new JFileChooser();
+        fc.showOpenDialog(null);
+        File inputFile = fc.getSelectedFile();
+        return inputFile;
 	}
 	
 	public void addConnectPollutionGridBtnListener(ActionListener listenForConnectPollutionGridBtn) {
