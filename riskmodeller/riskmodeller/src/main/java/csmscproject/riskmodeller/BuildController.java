@@ -5,7 +5,14 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 
+import javax.xml.parsers.ParserConfigurationException;
+
 import org.geotools.map.FeatureLayer;
+import org.opengis.geometry.MismatchedDimensionException;
+import org.opengis.referencing.FactoryException;
+import org.opengis.referencing.NoSuchAuthorityCodeException;
+import org.opengis.referencing.operation.TransformException;
+import org.xml.sax.SAXException;
 
 public class BuildController {
 	private BuildView view;
@@ -47,6 +54,30 @@ public class BuildController {
 		public void actionPerformed(ActionEvent e) {
 			File outputFile = view.setShapeFile("AirPollutionModel");
 			if (outputFile == null) {return;}
+			try {
+				model.buildPollutionModel(pollutionReferenceGrid, outputFile);
+			} catch (MismatchedDimensionException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			} catch (NoSuchAuthorityCodeException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			} catch (FactoryException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			} catch (SAXException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			} catch (ParserConfigurationException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			} catch (TransformException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
 		}
 	}
 	
