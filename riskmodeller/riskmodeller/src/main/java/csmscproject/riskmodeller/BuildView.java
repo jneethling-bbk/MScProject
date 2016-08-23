@@ -3,6 +3,8 @@ package csmscproject.riskmodeller;
 import java.awt.GridLayout;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -76,6 +78,28 @@ public class BuildView {
         File inputFile = fc.getSelectedFile();
         return inputFile;
 	}
+	
+    public File setShapeFile(String model) {
+        SimpleDateFormat sdfDate = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+        Date now = new Date();
+        String strDate = sdfDate.format(now);
+        String[] firstArray = strDate.split(" ");
+        String[] secondArray = firstArray[1].split(":");
+        strDate = firstArray[0] + "-" + secondArray[0] + "H" + secondArray[0];
+
+        JFileDataStoreChooser chooser = new JFileDataStoreChooser("shp");
+        chooser.setDialogTitle("Save " + model);
+        chooser.setSelectedFile(new File(model + "-" + strDate + ".shp"));
+
+        int returnVal = chooser.showSaveDialog(null);
+        File newFile = chooser.getSelectedFile();
+        
+        if (returnVal != JFileDataStoreChooser.APPROVE_OPTION) {
+            // the user cancelled the dialog
+        	newFile = null;
+        }
+        return newFile;
+    }
 	
 	public void addConnectPollutionGridBtnListener(ActionListener listenForConnectPollutionGridBtn) {
 		connectPollutionGridBtn.addActionListener(listenForConnectPollutionGridBtn);

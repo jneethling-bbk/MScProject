@@ -45,7 +45,8 @@ public class BuildController {
 	
 	class generatePollutionModelListener implements ActionListener {
 		public void actionPerformed(ActionEvent e) {
-			
+			File outputFile = view.setShapeFile("AirPollutionModel");
+			if (outputFile == null) {return;}
 		}
 	}
 	

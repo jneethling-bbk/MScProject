@@ -49,4 +49,8 @@ public class BuildModel {
         return isLine;
 	}
 	
+	public void buildPollutionModel(FeatureLayer pollutionReferenceGrid, File outputFile) {
+		
+	}
+	
 }
