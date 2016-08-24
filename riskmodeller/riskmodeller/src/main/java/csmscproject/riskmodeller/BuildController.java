@@ -2,9 +2,12 @@ package csmscproject.riskmodeller;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.IOException;
 
+import javax.swing.SwingWorker;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.geotools.map.FeatureLayer;
@@ -18,19 +21,35 @@ public class BuildController {
 	private BuildView view;
 	private BuildModel model;
 	private FeatureLayer pollutionReferenceGrid;
+	private boolean gridConnected;
 	private FeatureLayer trafficReferenceNetwork;
+	private boolean networkConnected;
 	
 	private final String FILE_ERROR_MSG = "Bad file: please try another...";
 	private final String DATA_ERROR_MSG = "Data Error, please try loading a different route file...";
-	private final String MESSAGE_HEADING = "Procedure failed";
+	private final String SUCCESS_MSG = "Model construction completed successfully";
+	private final String MESSAGE_HEADING_FAIL = "Procedure failed";
+	private final String MESSAGE_HEADING_OK = "Procedure completed";
 	
-	public BuildController(BuildView view, BuildModel model) {
+	public BuildController(final BuildView view, BuildModel model) {
 		this.model = model;
 		this.view = view;
+		
 		this.view.addConnectPollutionGridBtnListener(new connectPollutionGridListener());
 		this.view.addGeneratePollutionModelBtnListener(new generatePollutionModelListener());
 		this.view.addConnectTrafficNetworkBtnListener(new connectTrafficNetworkListener());
 		this.view.addGenerateTrafficModelBtnListener(new generateTrafficModelListener());
+	    
+		model.addPropertyChangeListener(new PropertyChangeListener() {
+		         public void propertyChange(PropertyChangeEvent pce) {
+		            if (BuildModel.PROGRESS.equals(pce.getPropertyName())) {
+		               view.setProgress((Integer)pce.getNewValue());
+		            }
+		         }
+		      });
+	
+		gridConnected = false;
+		networkConnected = false;
 	}
 	
 	public void configureGUI() {
@@ -39,45 +58,66 @@ public class BuildController {
 	
 	class connectPollutionGridListener implements ActionListener {
 		public void actionPerformed(ActionEvent e) {
+			
 			File file = view.chooseShapeFile();
 			if (file == null) {return;}
 			try {
 				pollutionReferenceGrid = model.getReferenceLayer(file, "PollutionGrid");
 			} catch (IOException e1) {
-				view.displayMessage(FILE_ERROR_MSG, MESSAGE_HEADING, 0);
+				view.displayMessage(FILE_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
 			}
-			view.enableGeneratePollutionModelBtn();
+			gridConnected = true;
+			view.enableBtns(gridConnected, networkConnected);
 		}			
 	}
 	
 	class generatePollutionModelListener implements ActionListener {
 		public void actionPerformed(ActionEvent e) {
-			File outputFile = view.setShapeFile("AirPollutionModel");
+			final File outputFile = view.setShapeFile("AirPollutionModel");
 			if (outputFile == null) {return;}
-			try {
-				model.buildPollutionModel(pollutionReferenceGrid, outputFile);
-			} catch (MismatchedDimensionException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			} catch (NoSuchAuthorityCodeException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			} catch (FactoryException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			} catch (IOException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			} catch (SAXException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			} catch (ParserConfigurationException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			} catch (TransformException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
+			
+		      SwingWorker<Void, Void> swingworker = new SwingWorker<Void, Void>() {
+			         @Override
+			         protected Void doInBackground() {
+			        	 model.reset();
+			        	 view.disableBtns();
+			        	 view.setStatus("STATUS: constructing risk model");
+							try {
+								model.buildPollutionModel(pollutionReferenceGrid, outputFile);
+							} catch (MismatchedDimensionException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							} catch (NoSuchAuthorityCodeException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							} catch (FactoryException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							} catch (IOException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							} catch (SAXException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							} catch (ParserConfigurationException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							} catch (TransformException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+							view.displayMessage(SUCCESS_MSG, MESSAGE_HEADING_OK, 1);
+							view.enableBtns(gridConnected, networkConnected);
+							view.setStatus("STATUS: waiting for input");
+							return null;
+			         }
+			         
+			         @Override
+			         protected void done() {
+			            view.done();
+			         }
+			      };
+			      swingworker.execute();
 		}
 	}
 	
@@ -88,9 +128,10 @@ public class BuildController {
 			try {
 				trafficReferenceNetwork = model.getReferenceLayer(file, "RoadNetwork");
 			} catch (IOException e1) {
-				view.displayMessage(FILE_ERROR_MSG, MESSAGE_HEADING, 0);
+				view.displayMessage(FILE_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
 			}
-			view.enableGenerateTrafficModelBtn();
+			networkConnected = true;
+			view.enableBtns(gridConnected, networkConnected);
 		}
 	}
 	

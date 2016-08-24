@@ -1,5 +1,8 @@
 package csmscproject.riskmodeller;
 
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -55,6 +58,26 @@ import com.vividsolutions.jts.geom.Polygon;
 
 public class BuildModel {
 
+	public static final String PROGRESS = "progress";
+	private int progress = 0;
+	private PropertyChangeSupport pcs = new PropertyChangeSupport(this);
+	
+	public void setProgress(int progress) {
+		int oldProgress = this.progress;
+		this.progress = progress;
+
+		PropertyChangeEvent evt = new PropertyChangeEvent(this, PROGRESS, oldProgress, progress);
+		pcs.firePropertyChange(evt);
+	}
+	
+	public void reset() {
+		setProgress(0);
+	}
+
+	public void addPropertyChangeListener(PropertyChangeListener listener) {
+			pcs.addPropertyChangeListener(listener);
+	}
+	   
 	public FeatureLayer getReferenceLayer(File file, String layerTitle) throws IOException {
         FileDataStore store = FileDataStoreFinder.getDataStore(file);
 		if (store == null) {
@@ -91,6 +114,7 @@ public class BuildModel {
 	}
 	
 	public void buildPollutionModel(FeatureLayer pollutionReferenceGrid, File newFile) throws NoSuchAuthorityCodeException, FactoryException, IOException, SAXException, ParserConfigurationException, MismatchedDimensionException, TransformException {
+		int counter = 0;
 		GeometryFactory geometryFactory = JTSFactoryFinder.getGeometryFactory(null);
 		
 		CoordinateReferenceSystem crs = CRS.decode("EPSG:4326");
@@ -205,6 +229,8 @@ public class BuildModel {
         			max = interpolation;
         		}
         		tempPolyCollection.add(polyFeature);
+        		counter++;
+        		setProgress(counter/250);
 	        }
 	    } finally {
 	    	inputPolyIterator.close();
@@ -219,6 +245,8 @@ public class BuildModel {
 	        	if ((Double) newPolyFeature.getAttribute("value") > topSlice) {
 	        		outputPolyCollection.add(newPolyFeature);
 	        	}
+        		counter++;
+        		setProgress(counter/250);
 	        }
 	    } finally {
 	    	outputPolyIterator.close();
@@ -279,4 +307,6 @@ public class BuildModel {
         	throw new IOException();
         }
 	}
+	
+	public void buildTrafficModel() {}
 }
