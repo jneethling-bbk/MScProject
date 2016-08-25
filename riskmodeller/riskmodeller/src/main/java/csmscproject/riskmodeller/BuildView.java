@@ -113,8 +113,6 @@ public class BuildView {
 	
     public File setShapeFile(String model) {
         SimpleDateFormat sdfDate = new SimpleDateFormat("yyyy-MM-dd HH:mm");
-        
-        //Date now = new Date();
         Date now = Calendar.getInstance().getTime();
         
         String strDate = sdfDate.format(now);

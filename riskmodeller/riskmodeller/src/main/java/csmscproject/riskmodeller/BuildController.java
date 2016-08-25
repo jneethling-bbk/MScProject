@@ -10,6 +10,7 @@ import java.io.IOException;
 import javax.swing.SwingWorker;
 import javax.xml.parsers.ParserConfigurationException;
 
+import org.geotools.feature.SchemaException;
 import org.geotools.map.FeatureLayer;
 import org.opengis.geometry.MismatchedDimensionException;
 import org.opengis.referencing.FactoryException;
@@ -73,7 +74,7 @@ public class BuildController {
 	
 	class generatePollutionModelListener implements ActionListener {
 		public void actionPerformed(ActionEvent e) {
-			final File outputFile = view.setShapeFile("AirPollutionModel");
+			final File outputFile = view.setShapeFile("AirPollutionRiskModel");
 			if (outputFile == null) {return;}
 			
 		      SwingWorker<Void, Void> swingworker = new SwingWorker<Void, Void>() {
@@ -137,7 +138,49 @@ public class BuildController {
 	
 	class generateTrafficModelListener implements ActionListener {
 		public void actionPerformed(ActionEvent e) {
-
+			final File inputFile = view.chooseGenericFile();
+			if (inputFile == null) {return;}
+			final File outputFile = view.setShapeFile("TrafficRiskModel");
+			if (outputFile == null) {return;}
+			
+		      SwingWorker<Void, Void> swingworker = new SwingWorker<Void, Void>() {
+			         @Override
+			         protected Void doInBackground() {
+			        	 model.reset();
+			        	 view.disableBtns();
+			        	 view.setStatus("STATUS: constructing risk model");
+			        	 try {
+							model.buildTrafficModel(trafficReferenceNetwork, inputFile, outputFile);
+						} catch (MismatchedDimensionException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						} catch (NoSuchAuthorityCodeException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						} catch (SchemaException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						} catch (FactoryException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						} catch (TransformException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+							view.displayMessage(SUCCESS_MSG, MESSAGE_HEADING_OK, 1);
+							view.enableBtns(gridConnected, networkConnected);
+							view.setStatus("STATUS: waiting for input");
+							return null;
+			         }			        	 
+			         @Override
+			         protected void done() {
+			            view.done();
+			         }
+			      };
+			      swingworker.execute();
 		}
 	}
 }
