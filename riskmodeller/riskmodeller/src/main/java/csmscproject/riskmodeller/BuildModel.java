@@ -377,7 +377,7 @@ public class BuildModel {
         		}
         		counter++;
         		// Depends on number of features in network dataset
-        		setProgress(counter/2000);	
+        		setProgress(counter/2500);	
         	}
         } finally {
             	lineIterator.close();
@@ -403,10 +403,13 @@ public class BuildModel {
         try {
             /* First line of the data file is the header */
             String line = reader.readLine();
-            System.out.println("Header: " + line);
+            //System.out.println("Header: " + line);
 
             int i = 0;
             for (line = reader.readLine(); line != null; line = reader.readLine()) {
+        		counter++;
+        		// Depends on number of lines in CSV file
+        		setProgress(counter/2500);
                 if (line.trim().length() > 0) { // skip blank lines
                     String tokens[] = line.split("\\,");
                     if (Integer.parseInt(tokens[5]) == 1 && Integer.parseInt(tokens[6]) < 3 && isNumeric(tokens[3]) && isNumeric(tokens[4])) {
@@ -417,9 +420,6 @@ public class BuildModel {
                     	i++;
                     }
                 }
-        		counter++;
-        		// Depends on number of lines in CSV file
-        		setProgress(counter/1400);
             }
         } finally {
             reader.close();
@@ -437,14 +437,13 @@ public class BuildModel {
         final double MAX_SEARCH_DISTANCE = bounds.getSpan(0) / 100.0;
 
         // Maximum time to spend running the snapping process (milliseconds)
-        final long DURATION = 5000;
+        //final long DURATION = 5000;
 
         int pointsProcessed = 0;
-        long elapsedTime = 0;
-        long startTime = System.currentTimeMillis();
-        while (pointsProcessed < NUM_POINTS && 
-                (elapsedTime = System.currentTimeMillis() - startTime) < DURATION) {
-
+        //long elapsedTime = 0;
+        //long startTime = System.currentTimeMillis();
+        //while (pointsProcessed < NUM_POINTS && (elapsedTime = System.currentTimeMillis() - startTime) < DURATION) {
+        while (pointsProcessed < NUM_POINTS) {
             // Get point and create search envelope
             Coordinate pt = points[pointsProcessed++];
             Envelope search = new Envelope(pt);
@@ -480,7 +479,7 @@ public class BuildModel {
                 pointCollection.add(feature);
             }
     		counter++;
-    		setProgress(counter/1000);
+    		setProgress(counter/2500);
         }
         
         SimpleFeatureIterator pointIterator = pointCollection.features();
@@ -494,7 +493,7 @@ public class BuildModel {
         		SimpleFeature feature = bufferBuilder.buildFeature(null);
         		bufferCollection.add(feature);
         		counter++;
-        		setProgress(counter/1000);
+        		setProgress(counter/2500);
         	}
         } finally {
         	pointIterator.close();
