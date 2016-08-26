@@ -55,6 +55,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
+import org.apache.cxf.helpers.DOMUtils;
 
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Envelope;
@@ -161,7 +162,8 @@ public class BuildModel {
 		conn.connect();
 		inputStream = conn.getInputStream();
 
-		Document doc = Utils.readXml(inputStream);
+		//Document doc = Utils.readXml(inputStream);
+		Document doc = DOMUtils.readXml(inputStream);
 		NodeList nList = doc.getElementsByTagName("Site");		
 			
 		for (int i=0; i<nList.getLength(); i++) {
