@@ -27,7 +27,7 @@ public class BuildController {
 	private boolean networkConnected;
 	
 	private final String FILE_ERROR_MSG = "Bad file: please try another...";
-	private final String DATA_ERROR_MSG = "Data Error, please try loading a different route file...";
+	private final String DATA_ERROR_MSG = "Data Error, please try using a different file...";
 	private final String SUCCESS_MSG = "Model construction completed successfully";
 	private final String MESSAGE_HEADING_FAIL = "Procedure failed";
 	private final String MESSAGE_HEADING_OK = "Procedure completed";

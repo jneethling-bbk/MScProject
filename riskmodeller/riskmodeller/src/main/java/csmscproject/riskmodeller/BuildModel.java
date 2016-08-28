@@ -12,8 +12,10 @@ import java.io.Serializable;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import javax.xml.parsers.ParserConfigurationException;
 
@@ -27,6 +29,7 @@ import org.geotools.data.shapefile.ShapefileDataStoreFactory;
 import org.geotools.data.simple.SimpleFeatureIterator;
 import org.geotools.data.simple.SimpleFeatureSource;
 import org.geotools.data.simple.SimpleFeatureStore;
+import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.feature.DefaultFeatureCollection;
 import org.geotools.feature.FeatureCollection;
 import org.geotools.feature.SchemaException;
@@ -40,11 +43,10 @@ import org.geotools.referencing.CRS;
 import org.geotools.referencing.GeodeticCalculator;
 import org.geotools.styling.SLD;
 import org.geotools.styling.Style;
-import org.geotools.util.NullProgressListener;
-import org.opengis.feature.Feature;
-import org.opengis.feature.FeatureVisitor;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.feature.simple.SimpleFeatureType;
+import org.opengis.filter.FilterFactory2;
+import org.opengis.filter.expression.Function;
 import org.opengis.geometry.MismatchedDimensionException;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.NoSuchAuthorityCodeException;
@@ -136,21 +138,14 @@ public class BuildModel {
         GeodeticCalculator gc = new GeodeticCalculator(crs);
 		CoordinateReferenceSystem wmsCRS = CRS.decode("EPSG:3857");
 		CoordinateReferenceSystem bng = CRS.decode("EPSG:27700");
-		//MathTransform transform = CRS.findMathTransform(wmsCRS, crs, true);
 		MathTransform mercatorToBNG = CRS.findMathTransform(wmsCRS, bng, true);
 		MathTransform geographicToBNG = CRS.findMathTransform(crs, bng, true);
 		
-        SimpleFeatureTypeBuilder b = new SimpleFeatureTypeBuilder();
-        //set the name first
-        b.setName("Sites");
-        //add some properties
-        b.add( "name", String.class );
-        b.add( "pollution", Double.class );
-        //then add the geometry properties
-        b.setCRS(crs); // set crs first
-        b.add("the_geom", Point.class); // then add geometry
-        //then build the type
-        final SimpleFeatureType SITES = b.buildFeatureType();
+		//Create the feature builder for points representing pollution measurement locations
+		Map<String, Class<?>> pollutionAttributes = new HashMap<>();
+		pollutionAttributes.put("name", String.class);
+		pollutionAttributes.put("pollution", Double.class);
+		final SimpleFeatureType SITES = buildFeatureType("Sites", pollutionAttributes, crs, Point.class);
         
         SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(SITES);
         DefaultFeatureCollection pointCollection = new DefaultFeatureCollection();
@@ -161,9 +156,9 @@ public class BuildModel {
 		URLConnection conn = url.openConnection();
 		conn.connect();
 		inputStream = conn.getInputStream();
-
-		//Document doc = Utils.readXml(inputStream);
 		Document doc = DOMUtils.readXml(inputStream);
+		inputStream.close();
+		
 		NodeList nList = doc.getElementsByTagName("Site");		
 			
 		for (int i=0; i<nList.getLength(); i++) {
@@ -194,10 +189,10 @@ public class BuildModel {
         	featureBuilder.add(point);
         	SimpleFeature feature = featureBuilder.buildFeature(null);
         	pointCollection.add(feature);
-    	
+    		counter++;
+    		setProgress(counter/250);   	
         }
 		
-		inputStream.close();
         
 		DefaultFeatureCollection tempPolyCollection = new DefaultFeatureCollection();
         FeatureCollection<?, ?> inputPolyCollection = pollutionReferenceGrid.getFeatureSource().getFeatures();
@@ -249,6 +244,12 @@ public class BuildModel {
 	    	inputPolyIterator.close();
 	    }
 	    
+	    FilterFactory2 ff = CommonFactoryFinder.getFilterFactory2();
+	    Function sum = ff.function("Collection_Max", ff.property("value"));
+
+	    Object value = sum.evaluate(tempPolyCollection);
+	    System.out.println(value);
+	    
 	    double topSlice = max - (max/3);
 	    DefaultFeatureCollection outputPolyCollection = new DefaultFeatureCollection();
 	    SimpleFeatureIterator outputPolyIterator = (SimpleFeatureIterator) tempPolyCollection.features();
@@ -265,59 +266,9 @@ public class BuildModel {
 	    	outputPolyIterator.close();
 	    }
         
-        ShapefileDataStoreFactory dataStoreFactory = new ShapefileDataStoreFactory();
-
-        Map<String, Serializable> params = new HashMap<String, Serializable>();
-        params.put("url", newFile.toURI().toURL());
-        params.put("create spatial index", Boolean.TRUE);
-
-        ShapefileDataStore newDataStore = (ShapefileDataStore) dataStoreFactory.createNewDataStore(params);
-        
-        newDataStore.createSchema((SimpleFeatureType) pollutionReferenceGrid.getFeatureSource().getSchema());
-        /*
-         * Write the features to the shapefile
-         */
-        Transaction transaction = new DefaultTransaction("create");
-
-        String typeName = newDataStore.getTypeNames()[0];
-        SimpleFeatureSource featureSource = newDataStore.getFeatureSource(typeName);
-        SimpleFeatureType SHAPE_TYPE = featureSource.getSchema();
-        /*
-         * The Shapefile format has a couple limitations:
-         * - "the_geom" is always first, and used for the geometry attribute name
-         * - "the_geom" must be of type Point, MultiPoint, MuiltiLineString, MultiPolygon
-         * - Attribute names are limited in length 
-         * - Not all data types are supported (example Timestamp represented as Date)
-         * 
-         * Each data store has different limitations so check the resulting SimpleFeatureType.
-         */
-        System.out.println("");
-        System.out.println("SHAPE:"+SHAPE_TYPE);
-        
-
-        if (featureSource instanceof SimpleFeatureStore) {
-            SimpleFeatureStore featureStore = (SimpleFeatureStore) featureSource;
-            /*
-             * SimpleFeatureStore has a method to add features from a
-             * SimpleFeatureCollection object, so we use the ListFeatureCollection
-             * class to wrap our list of features.
-             */
-            //SimpleFeatureCollection collection = new ListFeatureCollection(ROUTE, features);
-            featureStore.setTransaction(transaction);
-            try {
-                featureStore.addFeatures(outputPolyCollection);
-                //featureStore.addFeatures(newPolyCollection);
-                transaction.commit();
-            } catch (Exception problem) {
-                problem.printStackTrace();
-                transaction.rollback();
-            } finally {
-                transaction.close();
-            }
-        } else {
-        	transaction.close();
-        	throw new IOException();
-        }
+	    SimpleFeatureType TYPE = (SimpleFeatureType) pollutionReferenceGrid.getFeatureSource().getSchema();
+	    saveShapefile(newFile, TYPE, outputPolyCollection);
+	    
 	}
 	
 	public void buildTrafficModel(FeatureLayer trafficReferenceNetwork, File inputFile, File newFile) throws IOException, SchemaException, NoSuchAuthorityCodeException, FactoryException, MismatchedDimensionException, TransformException {
@@ -328,43 +279,27 @@ public class BuildModel {
     	GeometryFactory geometryFactory = JTSFactoryFinder.getGeometryFactory(null);
     	
     	//Create the feature builder for points representing accident locations
-        SimpleFeatureTypeBuilder pointBuilder = new SimpleFeatureTypeBuilder();
-        //set the name first
-        pointBuilder.setName("Accidentpoints");
-        //add some properties
-        //b.add( "name", String.class );
-        //b.add( "pollution", Double.class );
-        //then add the geometry properties
-        pointBuilder.setCRS(crs); // set crs first
-        pointBuilder.add("the_geom", Point.class); // then add geometry
-        //then build the type
-        final SimpleFeatureType ACCPOINTS = pointBuilder.buildFeatureType();        
-        //Now instansiate the builder
+		Map<String, Class<?>> accidentAttributes = new HashMap<>();
+		final SimpleFeatureType ACCPOINTS = buildFeatureType("Accidentpoints", accidentAttributes, crs, Point.class);      
+        
+		//Now instansiate the builder
         SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(ACCPOINTS);
     	// and a collection to hold the features
         DefaultFeatureCollection pointCollection = new DefaultFeatureCollection();
         
-        //Create the feature builder for polygons representing accident buffers
-        SimpleFeatureTypeBuilder polyBuilder = new SimpleFeatureTypeBuilder();
-        //set the name first
-        polyBuilder.setName("Accidentbuffers");
-        //add some properties
-        //b.add( "name", String.class );
-        //b.add( "pollution", Double.class );
-        //then add the geometry properties
-        polyBuilder.setCRS(wmsCRS); // set crs first
-        polyBuilder.add("the_geom", MultiPolygon.class); // then add geometry
-        //then build the type
-        final SimpleFeatureType ACCBUFFERS = polyBuilder.buildFeatureType();
+		//Create the feature builder for polygons representing accident buffers
+		Map<String, Class<?>> bufferAttributes = new HashMap<>();
+		final SimpleFeatureType ACCBUFFERS = buildFeatureType("Accidentbuffers", bufferAttributes, wmsCRS, MultiPolygon.class);
+        
         SimpleFeatureBuilder bufferBuilder = new SimpleFeatureBuilder(ACCBUFFERS);
         DefaultFeatureCollection bufferCollection = new DefaultFeatureCollection();
         
         Coordinate[] tempPoints = new Coordinate[1000000];
         int pointsInitCount = 0;
         
-        FeatureSource source = trafficReferenceNetwork.getFeatureSource();
+        FeatureSource<?, ?> source = trafficReferenceNetwork.getFeatureSource();
         final SpatialIndex index = new STRtree();
-        FeatureCollection features = source.getFeatures();
+        FeatureCollection<?, ?> features = source.getFeatures();
         
         SimpleFeatureIterator lineIterator = (SimpleFeatureIterator) features.features();
         try {
@@ -378,28 +313,14 @@ public class BuildModel {
         			}
         		}
         		counter++;
-        		// Depends on number of features in network dataset
+        		// Depends on number of features in network data set
         		setProgress(counter/2500);	
         	}
         } finally {
             	lineIterator.close();
         }
-        		
-        		
-//        features.accepts(new FeatureVisitor() {
-//            public void visit(Feature feature) {
-//                SimpleFeature simpleFeature = (SimpleFeature) feature;
-//                Geometry geom = (MultiLineString) simpleFeature.getDefaultGeometry();
-//                // Just in case: check for  null or empty geometry
-//                if (geom != null) {
-//                    Envelope env = geom.getEnvelopeInternal();
-//                    if (!env.isNull()) {
-//                        index.insert(env, new LocationIndexedLine(geom));
-//                    }
-//                }
-//            }
-//        }, new NullProgressListener());
         
+        		      
         // Get the point data
         BufferedReader reader = new BufferedReader(new FileReader(inputFile));
         try {
@@ -438,13 +359,7 @@ public class BuildModel {
          */
         final double MAX_SEARCH_DISTANCE = bounds.getSpan(0) / 100.0;
 
-        // Maximum time to spend running the snapping process (milliseconds)
-        //final long DURATION = 5000;
-
         int pointsProcessed = 0;
-        //long elapsedTime = 0;
-        //long startTime = System.currentTimeMillis();
-        //while (pointsProcessed < NUM_POINTS && (elapsedTime = System.currentTimeMillis() - startTime) < DURATION) {
         while (pointsProcessed < NUM_POINTS) {
             // Get point and create search envelope
             Coordinate pt = points[pointsProcessed++];
@@ -459,8 +374,7 @@ public class BuildModel {
              */
             List<LocationIndexedLine> lines = index.query(search);
 
-            // Initialize the minimum distance found to our maximum acceptable
-            // distance plus a little bit
+            // Initialise the minimum distance found to our maximum acceptable distance plus a little bit
             double minDist = MAX_SEARCH_DISTANCE + 1.0e-6;
             Coordinate minDistPoint = null;
 
@@ -501,59 +415,8 @@ public class BuildModel {
         	pointIterator.close();
         }
         
-        ShapefileDataStoreFactory dataStoreFactory = new ShapefileDataStoreFactory();
-
-        Map<String, Serializable> params = new HashMap<String, Serializable>();
-        params.put("url", newFile.toURI().toURL());
-        params.put("create spatial index", Boolean.TRUE);
-
-        ShapefileDataStore newDataStore = (ShapefileDataStore) dataStoreFactory.createNewDataStore(params);
-
-        /*
-         * TYPE is used as a template to describe the file contents
-         */
-        newDataStore.createSchema(ACCBUFFERS);
-        /*
-         * Write the features to the shapefile
-         */
-        Transaction transaction = new DefaultTransaction("create");
-
-        String typeName = newDataStore.getTypeNames()[0];
-        SimpleFeatureSource featureSource = newDataStore.getFeatureSource(typeName);
-        SimpleFeatureType SHAPE_TYPE = featureSource.getSchema();
-        /*
-         * The Shapefile format has a couple limitations:
-         * - "the_geom" is always first, and used for the geometry attribute name
-         * - "the_geom" must be of type Point, MultiPoint, MuiltiLineString, MultiPolygon
-         * - Attribute names are limited in length 
-         * - Not all data types are supported (example Timestamp represented as Date)
-         * 
-         * Each data store has different limitations so check the resulting SimpleFeatureType.
-         */
-        System.out.println("SHAPE:"+SHAPE_TYPE);
-
-        if (featureSource instanceof SimpleFeatureStore) {
-            SimpleFeatureStore featureStore = (SimpleFeatureStore) featureSource;
-            /*
-             * SimpleFeatureStore has a method to add features from a
-             * SimpleFeatureCollection object, so we use the ListFeatureCollection
-             * class to wrap our list of features.
-             */
-            //SimpleFeatureCollection collection = new ListFeatureCollection(TYPE, pointCollection);
-            featureStore.setTransaction(transaction);
-            try {
-                featureStore.addFeatures(bufferCollection);
-                transaction.commit();
-            } catch (Exception problem) {
-                problem.printStackTrace();
-                transaction.rollback();
-            } finally {
-                transaction.close();
-            }
-        } else {
-        	transaction.close();
-        	throw new IOException();
-        }
+        saveShapefile(newFile, ACCBUFFERS, bufferCollection);
+        
 	}
 	
     private Coordinate[] clean(final Coordinate[] v, int pointsInitCount) {
@@ -571,5 +434,70 @@ public class BuildModel {
         return false;  
       }  
       return true;  
+    }
+    
+    private void saveShapefile(File newFile, SimpleFeatureType type, DefaultFeatureCollection features) throws IOException {
+        
+    	ShapefileDataStoreFactory dataStoreFactory = new ShapefileDataStoreFactory();
+
+        Map<String, Serializable> params = new HashMap<String, Serializable>();
+        params.put("url", newFile.toURI().toURL());
+        params.put("create spatial index", Boolean.TRUE);
+
+        ShapefileDataStore newDataStore = (ShapefileDataStore) dataStoreFactory.createNewDataStore(params);
+
+        /*
+         * TYPE is used as a template to describe the file contents
+         */
+        newDataStore.createSchema(type);
+        /*
+         * Write the features to the shapefile
+         */
+        Transaction transaction = new DefaultTransaction("create");
+
+        String typeName = newDataStore.getTypeNames()[0];
+        SimpleFeatureSource featureSource = newDataStore.getFeatureSource(typeName);
+        SimpleFeatureType SHAPE_TYPE = featureSource.getSchema();
+
+        System.out.println("SHAPE:"+SHAPE_TYPE);
+
+        if (featureSource instanceof SimpleFeatureStore) {
+            SimpleFeatureStore featureStore = (SimpleFeatureStore) featureSource;
+
+            featureStore.setTransaction(transaction);
+            try {
+                featureStore.addFeatures(features);
+                transaction.commit();
+            } catch (Exception problem) {
+                problem.printStackTrace();
+                transaction.rollback();
+            } finally {
+                transaction.close();
+            }
+        } else {
+        	transaction.close();
+        	throw new IOException();
+        }
+    }
+    
+    private SimpleFeatureType buildFeatureType(String name, Map<String, Class<?>> attributes, CoordinateReferenceSystem crs, Class<?> geomType) {
+        
+    	SimpleFeatureTypeBuilder builder = new SimpleFeatureTypeBuilder();
+        //set the name first
+        builder.setName(name);
+        //add some properties
+        if (!attributes.isEmpty()) {
+        	Iterator<Entry<String, Class<?>>> it = attributes.entrySet().iterator();
+        	while (it.hasNext()) {
+        		Map.Entry pair = (Map.Entry)it.next();
+        		builder.add((String) pair.getKey(), (Class<?>) pair.getValue());
+        	}
+        }
+        //then add the geometry properties
+        builder.setCRS(crs); // set crs first
+        builder.add("the_geom", geomType); // then add geometry
+        //then build the type
+        SimpleFeatureType type = builder.buildFeatureType();	
+    	return type;
     }
 }

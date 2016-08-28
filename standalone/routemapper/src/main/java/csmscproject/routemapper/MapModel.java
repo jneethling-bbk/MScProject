@@ -332,7 +332,12 @@ public class MapModel {
 	            			polyArray[j] = (Polygon) polys.getGeometryN(j);
 	            			if (lines.intersects(polyArray[j])) {
 	            				Geometry pollutedPart = lines.intersection(polyArray[j]);
-	            				polDist = polDist + getLineStringLength((LineString) pollutedPart);
+	            				int nl = pollutedPart.getNumGeometries();
+	            				LineString lineArray[] = new LineString[nl];
+	            				for (int k=0; k<nl; k++) {
+	            					lineArray[k] = (LineString) pollutedPart.getGeometryN(k);
+	            					polDist = polDist + getLineStringLength(lineArray[k]);
+	            				}
 	            			}
 	            		}
 	            		
