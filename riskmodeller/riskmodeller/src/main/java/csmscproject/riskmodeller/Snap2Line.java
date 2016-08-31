@@ -4,8 +4,7 @@ package csmscproject.riskmodeller;
  * A Snap2Line object evaluates candidate points for snapping to a line
  * 
  * A Snap2Line object evaluates candidate points for
- * snapping to a line and returns the new snapped point
- * location if appropriate
+ * snapping to a line and returns the new Snap
  * 
  * @author Johannes Neethling
  *
