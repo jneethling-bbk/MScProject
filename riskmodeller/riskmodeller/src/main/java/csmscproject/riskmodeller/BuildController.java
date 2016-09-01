@@ -14,7 +14,6 @@ import org.geotools.feature.SchemaException;
 import org.geotools.map.FeatureLayer;
 import org.opengis.geometry.MismatchedDimensionException;
 import org.opengis.referencing.FactoryException;
-import org.opengis.referencing.NoSuchAuthorityCodeException;
 import org.opengis.referencing.operation.TransformException;
 import org.xml.sax.SAXException;
 
@@ -86,27 +85,22 @@ public class BuildController {
 							try {
 								model.buildPollutionModel(pollutionReferenceGrid, outputFile);
 							} catch (MismatchedDimensionException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							} catch (NoSuchAuthorityCodeException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							} catch (FactoryException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
+								view.displayMessage(DATA_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
 							} catch (IOException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
+								view.displayMessage(FILE_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
+							} catch (TransformException e) {
+								view.displayMessage(DATA_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
 							} catch (SAXException e) {
-								// TODO Auto-generated catch block
+								// can only be caused by a programming error
 								e.printStackTrace();
 							} catch (ParserConfigurationException e) {
-								// TODO Auto-generated catch block
+								// can only be caused by a programming error
 								e.printStackTrace();
-							} catch (TransformException e) {
-								// TODO Auto-generated catch block
+							} catch (FactoryException e) {
+								// can only be caused by a programming error
 								e.printStackTrace();
 							}
+							
 							view.displayMessage(SUCCESS_MSG, MESSAGE_HEADING_OK, 1);
 							view.enableBtns(gridConnected, networkConnected);
 							view.setStatus("STATUS: waiting for input");
@@ -152,22 +146,15 @@ public class BuildController {
 			        	 try {
 							model.buildTrafficModel(trafficReferenceNetwork, inputFile, outputFile);
 						} catch (MismatchedDimensionException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						} catch (NoSuchAuthorityCodeException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
+							view.displayMessage(DATA_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
 						} catch (IOException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						} catch (SchemaException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						} catch (FactoryException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
+							view.displayMessage(FILE_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
 						} catch (TransformException e) {
-							// TODO Auto-generated catch block
+							view.displayMessage(DATA_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
+						} catch (SchemaException e) {
+							// can only be caused by a programming error
+						} catch (FactoryException e) {
+							// can only be caused by a programming error
 							e.printStackTrace();
 						}
 							view.displayMessage(SUCCESS_MSG, MESSAGE_HEADING_OK, 1);

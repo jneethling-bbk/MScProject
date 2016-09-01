@@ -118,7 +118,7 @@ public class BuildView {
         String strDate = sdfDate.format(now);
         String[] firstArray = strDate.split(" ");
         String[] secondArray = firstArray[1].split(":");
-        strDate = firstArray[0] + "-" + secondArray[0] + "H" + secondArray[0];
+        strDate = firstArray[0] + "-" + secondArray[0] + "H00";
 
         JFileDataStoreChooser chooser = new JFileDataStoreChooser("shp");
         chooser.setDialogTitle("Save " + model);
