@@ -25,7 +25,7 @@ public class BuildController {
 	private FeatureLayer trafficReferenceNetwork;
 	private boolean networkConnected;
 	
-	private final String FILE_ERROR_MSG = "Bad file: please try another...";
+	private final String FILE_ERROR_MSG = "Bad file or web resource: please check the connection or try another...";
 	private final String DATA_ERROR_MSG = "Data Error, please try using a different file...";
 	private final String SUCCESS_MSG = "Model construction completed successfully";
 	private final String MESSAGE_HEADING_FAIL = "Procedure failed";
@@ -86,10 +86,13 @@ public class BuildController {
 								model.buildPollutionModel(pollutionReferenceGrid, outputFile);
 							} catch (MismatchedDimensionException e) {
 								view.displayMessage(DATA_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
+								return null;
 							} catch (IOException e) {
 								view.displayMessage(FILE_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
+								return null;
 							} catch (TransformException e) {
 								view.displayMessage(DATA_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
+								return null;
 							} catch (SAXException e) {
 								// can only be caused by a programming error
 								e.printStackTrace();
@@ -147,10 +150,13 @@ public class BuildController {
 							model.buildTrafficModel(trafficReferenceNetwork, inputFile, outputFile);
 						} catch (MismatchedDimensionException e) {
 							view.displayMessage(DATA_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
+							return null;
 						} catch (IOException e) {
 							view.displayMessage(FILE_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
+							return null;
 						} catch (TransformException e) {
 							view.displayMessage(DATA_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
+							return null;
 						} catch (SchemaException e) {
 							// can only be caused by a programming error
 						} catch (FactoryException e) {
