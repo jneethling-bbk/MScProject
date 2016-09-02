@@ -21,6 +21,7 @@ import javax.swing.JPanel;
 import javax.swing.JSlider;
 import javax.swing.JToolBar;
 
+import org.geotools.data.wms.WebMapServer;
 import org.geotools.map.FeatureLayer;
 import org.geotools.map.Layer;
 import org.geotools.map.MapContent;
@@ -28,6 +29,8 @@ import org.geotools.map.WMSLayer;
 import org.geotools.swing.JMapFrame;
 import org.geotools.swing.JMapPane;
 import org.geotools.swing.data.JFileDataStoreChooser;
+import org.geotools.swing.wms.WMSChooser;
+import org.geotools.swing.wms.WMSLayerChooser;
 import org.opengis.geometry.BoundingBox;
 import com.vividsolutions.jts.geom.Envelope;
 
@@ -153,7 +156,23 @@ public class MapView {
 		
 	}
 	
-	public void displayMap(WMSLayer backdrop) {  
+	public URL getURL(List<String> servers) {
+		URL capabilitiesURL = WMSChooser.showChooseWMS(servers);
+		if (capabilitiesURL == null) {
+			return null;
+		}
+		return capabilitiesURL;
+	}
+	
+	public List<org.geotools.data.ows.Layer> getWMSLayer(WebMapServer wms) {
+        List<org.geotools.data.ows.Layer> wmsLayers = WMSLayerChooser.showSelectLayer(wms);
+        if(wmsLayers == null){
+            return null;
+        }
+        return wmsLayers;
+	}
+	
+	public void displayMap(Layer backdrop) {  
 		mapcontent.addLayer(backdrop);
 		mapFrame.setVisible(true);
 	}
@@ -178,28 +197,25 @@ public class MapView {
 		riskLayer.setVisible(false);
 	}
 	
-	public void enableAccidentToggler() {
-		toggleTrafficBtn.setEnabled(true);
-	}
-	
-	public void enablePollutionToggler() {
-		togglePollutionBtn.setEnabled(true);
-	}
-	
-	public void enableEvaluateBtn() {
-		evaluateRouteBtn.setEnabled(true);
+	public void enableBtns(boolean demConnected, boolean accidentsConnected, boolean pollutionConnected, boolean routeLoaded) {
+		if (accidentsConnected) {
+			toggleTrafficBtn.setEnabled(true);
+			zoomToAreaBtn.setEnabled(true);
+		}
+		if (pollutionConnected) {
+			togglePollutionBtn.setEnabled(true);
+		}
+		if (accidentsConnected && pollutionConnected && demConnected && routeLoaded) {
+			evaluateRouteBtn.setEnabled(true);
+		}
 	}
 	
 	public void enableReportBtn() {
 		viewReportBtn.setEnabled(true);
 	}
 	
-	public void enableZoomBtn() {
-		zoomToAreaBtn.setEnabled(true);
-	}
-	
-	void displayErrorMessage(String errorMessage){
-		JOptionPane.showMessageDialog(mapFrame, errorMessage);
+	void displayMessage(String message, String heading, int messageType){
+		JOptionPane.showMessageDialog(mapFrame, message, heading, messageType);
 	}
 	
 	void setRiskAppetite() {

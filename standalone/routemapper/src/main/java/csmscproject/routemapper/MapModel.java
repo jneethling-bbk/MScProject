@@ -4,7 +4,9 @@ import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -81,23 +83,24 @@ public class MapModel {
     private CoordinateReferenceSystem displayCRS;
     private CoordinateReferenceSystem computationCRS;
     
-    public WMSLayer getBackdrop() throws ServiceException, IOException, NullPointerException {
-		String wmsUrlString = "http://ows.terrestris.de/osm/service?Service=WMS&Version=1.1.1&Request=GetCapabilities";
-		String wmsLayerName = "OSM-WMS";
-		//String wmsUrlString = "http://129.206.228.72/cached/osm?Service=WMS&Version=1.1.1&Request=GetCapabilities";
-		//String wmsLayerName = "osm_auto:all";
-				
-		URL url = new URL(wmsUrlString);
-		WebMapServer wms = new WebMapServer(url);
-			
-        WMSCapabilities capabilities = wms.getCapabilities(); 
-        Layer[] layers = WMSUtils.getNamedLayers(capabilities);
-        Layer myLayer = null;
-        for (Layer l : layers) {
-        	if (l.getName().equals(wmsLayerName)) {
-        		myLayer = l;
-        	}
-        }
+    public List<String> getServers() {
+		String wmsUrlString1 = "http://ows.terrestris.de/osm/service?Service=WMS&Version=1.1.1&Request=GetCapabilities";
+		String wmsUrlString2 = "http://129.206.228.72/cached/osm?Service=WMS&Version=1.1.1&Request=GetCapabilities";
+		List<String> servers = new ArrayList<String>();
+		servers.add(wmsUrlString1);
+		servers.add(wmsUrlString2);
+		return servers;
+    }
+    
+    public WebMapServer getWMS(URL capabilitiesURL) throws ServiceException, IOException {
+    	if (capabilitiesURL == null) {
+    		throw new NullPointerException();
+    	}
+    	WebMapServer wms = new WebMapServer(capabilitiesURL);
+    	return wms;
+    }
+    
+    public WMSLayer getBackdrop(WebMapServer wms, org.geotools.data.ows.Layer myLayer) {
         WMSLayer displayLayer = new WMSLayer(wms, myLayer );
         displayCRS = displayLayer.getCoordinateReferenceSystem();
         displayLayer.setTitle("Backdrop");

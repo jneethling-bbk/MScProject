@@ -4,11 +4,14 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
+import java.util.ArrayList;
 import java.util.List;
 
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.geotools.coverage.grid.GridCoverage2D;
+import org.geotools.data.wms.WebMapServer;
 import org.geotools.map.FeatureLayer;
 import org.geotools.map.Layer;
 import org.geotools.map.WMSLayer;
@@ -31,8 +34,17 @@ public class MapController {
 	private RouteReport report;
 	private RiskAppetite appetite;
 	
-	private final String FILE_ERROR_MSG = "Bad file: please try another...";
-	private final String DATA_ERROR_MSG = "Data Error, please try loading a different route file...";
+	private final String FILE_ERROR_MSG = "Bad file or web resource: please check the connection or try another...";
+	private final String DATA_ERROR_MSG = "Data Error, please try using a different file...";
+	private final String SUCCESS_MSG = "Model construction completed successfully";
+	private final String MESSAGE_HEADING_FAIL = "Procedure failed";
+	private final String MESSAGE_HEADING_OK = "Procedure completed";
+	
+	boolean demConnected;
+	boolean accidentsConnected;
+	boolean pollutionConnected;
+	boolean routeLoaded;
+	boolean routeEvaluated;
 	
 	public MapController(MapModel model, MapView view) {
 		
@@ -58,12 +70,39 @@ public class MapController {
 		pollutionLayer = null;
 		userRouteLayer = null;
 		userRouteFileName = null;
+		
+		demConnected = false;
+		accidentsConnected = false;
+		pollutionConnected = false;
+		routeLoaded = false;
 	}
 	
-	public void configureMapView() throws ServiceException, IOException, NullPointerException {
+	public boolean configureMapView() {
+
+		List<String> servers = model.getServers();
+		URL capabilitiesURL = view.getURL(servers);
+		WebMapServer wms = null;
+		try {
+			wms = model.getWMS(capabilitiesURL);
+		} catch (ServiceException e) {
+			view.displayMessage(FILE_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
+			return false;
+		} catch (IOException e) {
+			view.displayMessage(FILE_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
+			return false;
+		} catch (NullPointerException e) {
+			view.displayMessage("You must select a URL for WMS visualisation", "Cancelled", 0);
+			return false;
+		}
 		
-		WMSLayer backdrop = model.getBackdrop();
-		view.displayMap(backdrop);
+		List<org.geotools.data.ows.Layer> wmsLayers = view.getWMSLayer(wms);
+		if (wmsLayers.isEmpty()) {
+			view.displayMessage("You must select a layer for WMS visualisation", "Cancelled", 0);
+			return false;
+		}
+		WMSLayer displayLayer = model.getBackdrop(wms, wmsLayers.get(0));
+		view.displayMap(displayLayer);
+		return true;
 	}
 	
 	class DemConnectionListener implements ActionListener {
@@ -76,12 +115,14 @@ public class MapController {
 				// can only be caused by a programming error
 				e1.printStackTrace();
 			} catch (IOException e1) {
-				view.displayErrorMessage(FILE_ERROR_MSG);
+				view.displayMessage(FILE_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
 				return;
 			} catch (FactoryException e1) {
 				// can only be caused by a programming error
 				e1.printStackTrace();
 			}
+			demConnected = true;
+			view.enableBtns(demConnected, accidentsConnected, pollutionConnected, routeLoaded);
 		}
 	}
 	
@@ -92,7 +133,7 @@ public class MapController {
 			try {
 				accidentLayer = model.getRiskLayer(file, "Accidents");
 			} catch (IOException e1) {
-				view.displayErrorMessage(FILE_ERROR_MSG);
+				view.displayMessage(FILE_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
 				return;
 			}
 			List<Layer> layerList = view.getLayerList();
@@ -102,8 +143,8 @@ public class MapController {
 				}
 			}
 			view.addLayer(accidentLayer);
-			view.enableAccidentToggler();
-			view.enableZoomBtn();
+			accidentsConnected = true;
+			view.enableBtns(demConnected, accidentsConnected, pollutionConnected, routeLoaded);
 		}
 	}
 	
@@ -114,7 +155,7 @@ public class MapController {
 			try {
 				pollutionLayer = model.getRiskLayer(file, "Pollution");
 			} catch (IOException e1) {
-				view.displayErrorMessage(FILE_ERROR_MSG);
+				view.displayMessage(FILE_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
 				return;
 			}
 			List<Layer> layerList = view.getLayerList();
@@ -124,7 +165,8 @@ public class MapController {
 				}
 			}
 			view.addLayer(pollutionLayer);
-			view.enablePollutionToggler();
+			pollutionConnected = true;
+			view.enableBtns(demConnected, accidentsConnected, pollutionConnected, routeLoaded);
 		}
 	}
 	
@@ -163,22 +205,22 @@ public class MapController {
 				userRouteLayer = model.getRouteLayer(file, "Route");
 				view.zoomToLayer(userRouteLayer);
 			} catch (IOException e1) {
-				view.displayErrorMessage(FILE_ERROR_MSG);
+				view.displayMessage(FILE_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
 				return;
 			} catch (MismatchedDimensionException e1) {
-				view.displayErrorMessage(DATA_ERROR_MSG);
+				view.displayMessage(DATA_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
 				return;
 			} catch (ParserConfigurationException e1) {
 				// can only be caused by a programming error
 				e1.printStackTrace();
 			} catch (SAXException e1) {
-				view.displayErrorMessage(FILE_ERROR_MSG);
+				view.displayMessage(FILE_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
 				return;
 			} catch (FactoryException e1) {
 				// can only be caused by a programming error
 				e1.printStackTrace();
 			} catch (TransformException e1) {
-				view.displayErrorMessage(DATA_ERROR_MSG);
+				view.displayMessage(DATA_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
 				return;
 			}
 			List<Layer> layerList = view.getLayerList();
@@ -188,7 +230,8 @@ public class MapController {
 				}
 			}
 			view.addLayer(userRouteLayer);
-			view.enableEvaluateBtn();
+			routeLoaded = true;
+			view.enableBtns(demConnected, accidentsConnected, pollutionConnected, routeLoaded);
 		}
 	}
 	
@@ -201,7 +244,7 @@ public class MapController {
 				report.setAccidentCount((long) model.getNumIntersects(userRouteLayer, accidentLayer));
 				report.setPollutionPercentage((long) model.getPollutedPercentage(userRouteLayer, pollutionLayer));
 			} catch (MismatchedDimensionException e1) {
-				view.displayErrorMessage(DATA_ERROR_MSG);
+				view.displayMessage(DATA_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
 				return;
 			} catch (NoSuchAuthorityCodeException e1) {
 				// can only be caused by a programming error
@@ -210,10 +253,10 @@ public class MapController {
 				// can only be caused by a programming error
 				e1.printStackTrace();
 			} catch (IOException e1) {
-				view.displayErrorMessage(FILE_ERROR_MSG);
+				view.displayMessage(FILE_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
 				return;
 			} catch (TransformException e1) {
-				view.displayErrorMessage(DATA_ERROR_MSG);
+				view.displayMessage(DATA_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
 				return;
 			}
 			appetite.setMaxAccidentCount((long) view.getAllowedIntersects());
