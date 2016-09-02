@@ -70,9 +70,11 @@ public class MapModel {
     public List<String> getServers() {
 		String wmsUrlString1 = "http://ows.terrestris.de/osm/service?Service=WMS&Version=1.1.1&Request=GetCapabilities";
 		String wmsUrlString2 = "http://129.206.228.72/cached/osm?Service=WMS&Version=1.1.1&Request=GetCapabilities";
+		String wmsUrlString3 = "http://osm-demo.wheregroup.com/service?Service=WMS&Version=1.1.1&Request=GetCapabilities";
 		List<String> servers = new ArrayList<String>();
 		servers.add(wmsUrlString1);
 		servers.add(wmsUrlString2);
+		servers.add(wmsUrlString3);
 		return servers;
     }
     
