@@ -112,8 +112,6 @@ public class MapModel {
     	GridCoverage2DReader reader = format.getReader(file);
     	GridCoverage2D coverage = reader.read(null);
     	return coverage;
-    	//CoordinateReferenceSystem targetCRS = CRS.decode("EPSG:3857");
-    	//return (GridCoverage2D) Operations.DEFAULT.resample(coverage,targetCRS);
     }
 		
 	public FeatureLayer getRiskLayer(File file, String layerTitle) throws IOException {
@@ -170,70 +168,15 @@ public class MapModel {
     }
 	
 	public FeatureLayer getRouteLayer(File file, String layerTitle) throws IOException, ParserConfigurationException, SAXException, FactoryException, MismatchedDimensionException, TransformException {
-
-		computationCRS = CRS.decode("EPSG:4326");
 		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-        DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-        routeDoc = dBuilder.parse(file);
-        routeDoc.getDocumentElement().normalize();       
-        NodeList nList = routeDoc.getElementsByTagName("coordinates");
-		if (nList.getLength() < 1) {
-			// Maybe create a custom exception
-			throw new IOException();
-		}
-		Node cNode = nList.item(0);
-		String raw = cNode.getTextContent();
-		String[] masterArray = raw.split(" ");
-		Coordinate[] tempcoords = new Coordinate[masterArray.length];
-		int index = 0;
-		for (String s : masterArray) {
-			String[] subArray = s.split(",");
-			
-			if (subArray.length > 2 && isNumeric(subArray[1]) && isNumeric(subArray[0])) {
-				Coordinate c = new Coordinate(Double.parseDouble(subArray[1]), Double.parseDouble(subArray[0]));
-				tempcoords[index] = c;
-				index++;
-			}
-		}
-		Coordinate[] coords = new Coordinate[index];
-		for (int n=0; n<index; n++) {
-			coords[n] = tempcoords[n];
-		}
-				
-//        Coordinate[] coords = new Coordinate[nList.getLength()];
-//        for (int i=0; i<nList.getLength(); i++) {
-//        	Node nNode = nList.item(i);
-//        	String raw = nNode.getTextContent();
-//        	String[] arr = raw.split(" ");
-//        	Coordinate c = new Coordinate(Double.parseDouble(arr[1]), Double.parseDouble(arr[0]));
-//        	coords[i] = c;
-//        }
-        
-        GeometryFactory geometryFactory = JTSFactoryFinder.getGeometryFactory(null);
-        LineString line = geometryFactory.createLineString(coords);
-        
-//        for (int n=0; n<line.getNumPoints(); n++) {
-//        	Point p = line.getPointN(n);
-//        	Coordinate c = p.getCoordinate();
-//        	System.out.println("X: " + c.x + " Y: " + c.y );
-//        }
-        MathTransform transform = CRS.findMathTransform(computationCRS, displayCRS, true);
-        Geometry transformedLine = JTS.transform(line, transform);
-        
-        SimpleFeatureTypeBuilder b = new SimpleFeatureTypeBuilder();
-        //set the name first
-        b.setName("Route");
-        //then add the geometry properties
-        b.setCRS(displayCRS); // set crs first
-        b.add("the_geom", MultiLineString.class); // then add geometry
-        //then build the type
-        final SimpleFeatureType ROUTE = b.buildFeatureType();
-        
-        SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(ROUTE);
-        featureBuilder.add(transformedLine);
-        SimpleFeature feature = featureBuilder.buildFeature(null);
-        DefaultFeatureCollection lineCollection = new DefaultFeatureCollection();
-        lineCollection.add(feature);
+        DocumentBuilder dBuilder;
+		dBuilder = dbFactory.newDocumentBuilder();
+		Document routeDoc = dBuilder.parse(file);
+		
+		KML2Line k2l = new KML2LineImpl();
+		k2l.setDOM(routeDoc);
+		k2l.setCRS(displayCRS);
+		DefaultFeatureCollection lineCollection = k2l.getLine();
         FeatureLayer layer = new FeatureLayer(lineCollection, createLineStyle(Color.DARK_GRAY));
         layer.setTitle(layerTitle);
         return layer;
