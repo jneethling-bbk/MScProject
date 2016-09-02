@@ -17,7 +17,6 @@ import java.io.IOException;
 import org.geotools.feature.DefaultFeatureCollection;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.w3c.dom.Document;
-import org.xml.sax.SAXException;
 
 public interface KML2Line {
 

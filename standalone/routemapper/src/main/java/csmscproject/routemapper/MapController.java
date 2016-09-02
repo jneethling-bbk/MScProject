@@ -5,7 +5,6 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
 
 import javax.xml.parsers.ParserConfigurationException;
@@ -36,9 +35,7 @@ public class MapController {
 	
 	private final String FILE_ERROR_MSG = "Bad file or web resource: please check the connection or try another...";
 	private final String DATA_ERROR_MSG = "Data Error, please try using a different file...";
-	private final String SUCCESS_MSG = "Model construction completed successfully";
 	private final String MESSAGE_HEADING_FAIL = "Procedure failed";
-	private final String MESSAGE_HEADING_OK = "Procedure completed";
 	
 	boolean demConnected;
 	boolean accidentsConnected;

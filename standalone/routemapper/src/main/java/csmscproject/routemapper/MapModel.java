@@ -17,23 +17,15 @@ import org.geotools.coverage.grid.GridCoverage2D;
 import org.geotools.coverage.grid.io.AbstractGridFormat;
 import org.geotools.coverage.grid.io.GridCoverage2DReader;
 import org.geotools.coverage.grid.io.GridFormatFinder;
-import org.geotools.coverage.processing.Operations;
-import org.geotools.data.FeatureSource;
 import org.geotools.data.FileDataStore;
 import org.geotools.data.FileDataStoreFinder;
-import org.geotools.data.ows.Layer;
-import org.geotools.data.ows.WMSCapabilities;
 import org.geotools.data.simple.SimpleFeatureIterator;
 import org.geotools.data.simple.SimpleFeatureSource;
-import org.geotools.data.wms.WMSUtils;
 import org.geotools.data.wms.WebMapServer;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.feature.DefaultFeatureCollection;
 import org.geotools.feature.FeatureCollection;
-import org.geotools.feature.simple.SimpleFeatureBuilder;
-import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
 import org.geotools.geometry.jts.JTS;
-import org.geotools.geometry.jts.JTSFactoryFinder;
 import org.geotools.map.FeatureLayer;
 import org.geotools.map.WMSLayer;
 import org.geotools.ows.ServiceException;
@@ -44,16 +36,11 @@ import org.geotools.styling.Fill;
 import org.geotools.styling.LineSymbolizer;
 import org.geotools.styling.PolygonSymbolizer;
 import org.geotools.styling.Rule;
-import org.geotools.styling.SLDParser;
 import org.geotools.styling.Stroke;
 import org.geotools.styling.Style;
 import org.geotools.styling.StyleFactory;
-import org.geotools.swing.dialog.JExceptionReporter;
-import org.geotools.swing.styling.JSimpleStyleDialog;
 import org.opengis.feature.simple.SimpleFeature;
-import org.opengis.feature.simple.SimpleFeatureType;
 import org.opengis.filter.FilterFactory;
-import org.opengis.geometry.DirectPosition;
 import org.opengis.geometry.MismatchedDimensionException;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.NoSuchAuthorityCodeException;
@@ -61,13 +48,10 @@ import org.opengis.referencing.crs.CoordinateReferenceSystem;
 import org.opengis.referencing.operation.MathTransform;
 import org.opengis.referencing.operation.TransformException;
 import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Geometry;
-import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.LineString;
 import com.vividsolutions.jts.geom.MultiLineString;
 import com.vividsolutions.jts.geom.MultiPolygon;
@@ -79,7 +63,7 @@ public class MapModel {
     private static StyleFactory styleFactory = CommonFactoryFinder.getStyleFactory();
     private static FilterFactory filterFactory = CommonFactoryFinder.getFilterFactory();
     
-    private Document routeDoc;
+    //private Document routeDoc;
     private CoordinateReferenceSystem displayCRS;
     private CoordinateReferenceSystem computationCRS;
     
@@ -258,8 +242,8 @@ public class MapModel {
 	    SimpleFeatureIterator lineIterator = (SimpleFeatureIterator) lineCollection.features();
 	    
 	    double polDist = 0.0;
-        MathTransform transform = CRS.findMathTransform(displayCRS, computationCRS, true);        
-        GeodeticCalculator gc = new GeodeticCalculator(computationCRS);
+        //MathTransform transform = CRS.findMathTransform(displayCRS, computationCRS, true);        
+        //GeodeticCalculator gc = new GeodeticCalculator(computationCRS);
 	    
 	    try {
 	        while( lineIterator.hasNext() ){
@@ -287,7 +271,6 @@ public class MapModel {
 	            			}
 	            		}
 	            		
-	            		//Geometry pollutedPart = lines.intersection(polys);
 	            	}	            	
 	            } finally {
 	            	polyIterator.close();
@@ -296,22 +279,7 @@ public class MapModel {
 	    } finally {
 	        lineIterator.close();
 	    }
-//        SimpleFeatureTypeBuilder b = new SimpleFeatureTypeBuilder();
-//        //set the name
-//        b.setName("Route");
-//        //add a geometry property
-//        b.setCRS(displayCRS); // set crs first
-//        b.add("the_geom", MultiLineString.class); // then add geometry
-//        //build the type
-//        final SimpleFeatureType ROUTE = b.buildFeatureType();       
-//        SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(ROUTE);
-//        featureBuilder.add(pollutedPart);
-//        SimpleFeature feature = featureBuilder.buildFeature(null);
-//        DefaultFeatureCollection lineCollection1 = new DefaultFeatureCollection();
-//        lineCollection1.add(feature);
-//        
-//        FeatureLayer nl = new FeatureLayer(lineCollection1, createLineStyle(Color.GRAY));
-        //double polDist = getRouteLen(nl);
+
         double totDist = getRouteLen(userRouteLayer);
         val = (int) ((polDist/totDist) *100);
     	return val;
@@ -327,7 +295,7 @@ public class MapModel {
 	    SimpleFeatureIterator iterator = (SimpleFeatureIterator) lineCollection.features();
 	    
 	    try {
-	        while( iterator.hasNext() ){
+	        while(iterator.hasNext()){
 	            SimpleFeature feature = iterator.next();
 	            MultiLineString geom = (MultiLineString) feature.getDefaultGeometry();
 	            int n = geom.getNumGeometries();
@@ -379,25 +347,8 @@ public class MapModel {
 	    Coordinate startC = startPTransformed.getCoordinate();
 	    Coordinate endC = endPTransformed.getCoordinate();
 	    
-	    // Sunday - must get a DirectPosition from a Geometry
 	    float[] startHeight = (float[]) (dem.evaluate(JTS.toDirectPosition(startC, computationCRS)));
 	    float[] endHeight = (float[]) (dem.evaluate(JTS.toDirectPosition(endC, computationCRS)));
-		
-//		NodeList nList = routeDoc.getElementsByTagName("gx:coord");
-//		if (nList.getLength() < 2) {
-//			// Maybe create a custom exception
-//			throw new IOException();
-//		}
-//        
-//		Node first = nList.item(0);
-//        String firstRaw = first.getTextContent();
-//    	String[] firstArr = firstRaw.split(" ");
-//    	double startHeight = Double.parseDouble(firstArr[2]);
-//        
-//        Node last = nList.item(nList.getLength()-1);
-//        String lastRaw = last.getTextContent();
-//    	String[] lastArr = lastRaw.split(" ");
-//    	double endHeight = Double.parseDouble(lastArr[2]);
         
     	double val = ((endHeight[0]-startHeight[0])/getRouteLen(userRouteLayer)) * 100;        
 		return val;
@@ -416,75 +367,4 @@ public class MapModel {
     	gc.setDestinationPosition( JTS.toDirectPosition(end, computationCRS));        
 		return gc.getOrthodromicDistance();
 	}
-	
-    public static boolean isNumeric(String str) {  
-      try {  
-        double d = Double.parseDouble(str);  
-      } catch(NumberFormatException nfe) {  
-        return false;  
-      }  
-      return true;  
-    }
-    
-    public static boolean coordinateIsValid(Coordinate c) {
-    	try {
-    		double x = c.x;
-    		double y = c.y;
-    	} catch (NullPointerException e) {
-    		return false;
-    	}
-    	return true;
-    }
-	
-    /**
-     * Create a Style to display the features. If an SLD file is in the same
-     * directory as the shapefile then we will create the Style by processing
-     * this. Otherwise we display a JSimpleStyleDialog to prompt the user for
-     * preferences.
-     */
-    
-	//private Style createStyle(File file, FeatureSource featureSource) {
-    private Style createStyle(File file) {
-        File sld = toSLDFile(file);
-        //if (sld != null) {
-            return createFromSLD(sld);
-        //}
-
-        //SimpleFeatureType schema = (SimpleFeatureType)featureSource.getSchema();
-        //return JSimpleStyleDialog.showDialog(null, schema);
-    }
-    
-    /**
-     * Figure out if a valid SLD file is available.
-     */
-    public File toSLDFile(File file)  {
-        String path = file.getAbsolutePath();
-        String base = path.substring(0,path.length()-4);
-        String newPath = base + ".sld";
-        File sld = new File( newPath );
-        if( sld.exists() ){
-            return sld;
-        }
-        newPath = base + ".SLD";
-        sld = new File( newPath );
-        if( sld.exists() ){
-            return sld;
-        }
-        return null;
-    }
-
-    /**
-     * Create a Style object from a definition in a SLD document
-     */
-    private Style createFromSLD(File sld) {
-        try {
-            SLDParser stylereader = new SLDParser(styleFactory, sld.toURI().toURL());
-            Style[] style = stylereader.readXML();
-            return style[0];
-            
-        } catch (Exception e) {
-            JExceptionReporter.showDialog(e, "Problem creating style");
-        }
-        return null;
-    }
 }
