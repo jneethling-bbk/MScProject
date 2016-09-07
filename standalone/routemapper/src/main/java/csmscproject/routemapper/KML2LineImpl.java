@@ -13,7 +13,6 @@ package csmscproject.routemapper;
  */
 
 import java.io.IOException;
-
 import org.geotools.feature.DefaultFeatureCollection;
 import org.geotools.feature.simple.SimpleFeatureBuilder;
 import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
@@ -76,6 +75,18 @@ public class KML2LineImpl implements KML2Line {
 			// Only caused by coding errors
 			e.printStackTrace();
 		}
+		
+        SimpleFeatureTypeBuilder b = new SimpleFeatureTypeBuilder();
+        //set the name first
+        b.setName("Route");
+        //then add the geometry properties
+        b.setCRS(displayCRS); // set crs first
+        b.add("the_geom", MultiLineString.class); // then add geometry
+        //then build the type
+        final SimpleFeatureType ROUTE = b.buildFeatureType();
+        
+        GeometryFactory geometryFactory = JTSFactoryFinder.getGeometryFactory(null);
+        DefaultFeatureCollection lineCollection = new DefaultFeatureCollection();
         
         routeDoc.getDocumentElement().normalize();       
         NodeList nList = routeDoc.getElementsByTagName("coordinates");
@@ -101,42 +112,34 @@ public class KML2LineImpl implements KML2Line {
 		for (int n=0; n<index; n++) {
 			coords[n] = tempcoords[n];
 		}
-        
-        GeometryFactory geometryFactory = JTSFactoryFinder.getGeometryFactory(null);
-        LineString line = geometryFactory.createLineString(coords);
-        
-        MathTransform transform = null;
-		try {
-			transform = CRS.findMathTransform(computationCRS, displayCRS, true);
-		} catch (FactoryException e) {
-			// Only caused by coding errors
-			e.printStackTrace();
+		
+		for (int i=0; i<coords.length-1; i++){
+			SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(ROUTE);
+			Coordinate[] outCoords = {coords[i], coords[i+1]};
+			LineString line = geometryFactory.createLineString(outCoords);
+	        MathTransform transform = null;
+			try {
+				transform = CRS.findMathTransform(computationCRS, displayCRS, true);
+			} catch (FactoryException e) {
+				// Only caused by coding errors
+				e.printStackTrace();
+			}
+	        Geometry transformedLine = null;
+			try {
+				transformedLine = JTS.transform(line, transform);
+			} catch (MismatchedDimensionException e) {
+				// Only caused by coding errors
+				e.printStackTrace();
+			} catch (TransformException e) {
+				// Only caused by coding errors
+				e.printStackTrace();
+			}
+			
+	        featureBuilder.add(transformedLine);
+	        SimpleFeature feature = featureBuilder.buildFeature(null);
+	        lineCollection.add(feature);
 		}
-        Geometry transformedLine = null;
-		try {
-			transformedLine = JTS.transform(line, transform);
-		} catch (MismatchedDimensionException e) {
-			// Only caused by coding errors
-			e.printStackTrace();
-		} catch (TransformException e) {
-			// Only caused by coding errors
-			e.printStackTrace();
-		}
         
-        SimpleFeatureTypeBuilder b = new SimpleFeatureTypeBuilder();
-        //set the name first
-        b.setName("Route");
-        //then add the geometry properties
-        b.setCRS(displayCRS); // set crs first
-        b.add("the_geom", MultiLineString.class); // then add geometry
-        //then build the type
-        final SimpleFeatureType ROUTE = b.buildFeatureType();
-        
-        SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(ROUTE);
-        featureBuilder.add(transformedLine);
-        SimpleFeature feature = featureBuilder.buildFeature(null);
-        DefaultFeatureCollection lineCollection = new DefaultFeatureCollection();
-        lineCollection.add(feature);
         return lineCollection;
 	}
 		

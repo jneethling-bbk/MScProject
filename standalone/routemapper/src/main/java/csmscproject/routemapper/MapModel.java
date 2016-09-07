@@ -42,6 +42,8 @@ import org.geotools.styling.StyleFactory;
 import org.opengis.feature.simple.SimpleFeature;
 import org.opengis.filter.FilterFactory;
 import org.opengis.geometry.MismatchedDimensionException;
+//import org.opengis.geometry.coordinate.LineSegment;
+//import org.opengis.geometry.coordinate.LineString;
 import org.opengis.referencing.FactoryException;
 import org.opengis.referencing.NoSuchAuthorityCodeException;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
@@ -154,6 +156,7 @@ public class MapModel {
     }
 	
 	public FeatureLayer getRouteLayer(File file, String layerTitle) throws IOException, ParserConfigurationException, SAXException, FactoryException, MismatchedDimensionException, TransformException {
+		computationCRS = CRS.decode("EPSG:4326");
 		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder dBuilder;
 		dBuilder = dbFactory.newDocumentBuilder();
@@ -239,13 +242,8 @@ public class MapModel {
     	int val = 0;
 		FeatureCollection<?, ?> lineCollection = userRouteLayer.getFeatureSource().getFeatures();
 		FeatureCollection<?, ?> polyCollection = riskLayer.getFeatureSource().getFeatures();
-		//Geometry pollutedPart = null;
-
-	    SimpleFeatureIterator lineIterator = (SimpleFeatureIterator) lineCollection.features();
-	    
+	    SimpleFeatureIterator lineIterator = (SimpleFeatureIterator) lineCollection.features();    
 	    double polDist = 0.0;
-        //MathTransform transform = CRS.findMathTransform(displayCRS, computationCRS, true);        
-        //GeodeticCalculator gc = new GeodeticCalculator(computationCRS);
 	    
 	    try {
 	        while( lineIterator.hasNext() ){
@@ -299,12 +297,16 @@ public class MapModel {
 	    try {
 	        while(iterator.hasNext()){
 	            SimpleFeature feature = iterator.next();
+	            
+	            
 	            MultiLineString geom = (MultiLineString) feature.getDefaultGeometry();
+	            
 	            int n = geom.getNumGeometries();
 	            LineString lines[] = new LineString[n];
 	            for ( int i = 0; i < n; i++ ) {
 	            	lines[ i ] = (LineString) geom.getGeometryN( i );
-		            Point startP = lines[i].getStartPoint();
+	            	
+	            	Point startP = lines[i].getStartPoint();
 		            Point endP = lines[i].getEndPoint();
 		            
 		            Geometry startPTransformed = JTS.transform(startP, transform);
@@ -329,21 +331,27 @@ public class MapModel {
 		MathTransform transform = CRS.findMathTransform(displayCRS, computationCRS, true);
 		FeatureCollection<?, ?> lineCollection = userRouteLayer.getFeatureSource().getFeatures();
 		SimpleFeatureIterator lineIterator = (SimpleFeatureIterator) lineCollection.features();
-		LineString firstLine = null;
+		SimpleFeature lineFeatureStart = lineIterator.next();
+		MultiLineString mLineS = (MultiLineString) lineFeatureStart.getDefaultGeometry();
+		LineString firstLine = (LineString) mLineS.getGeometryN(0);
+		
+		//LineString firstLine = null;
 		LineString lastLine = null;
+		SimpleFeature lineFeatureEnd = null;
 		try {
 	        while(lineIterator.hasNext()) {
-	        	SimpleFeature lineFeature = lineIterator.next();
-	        	MultiLineString mLine = (MultiLineString) lineFeature.getDefaultGeometry();
-	            int n = mLine.getNumGeometries();
-	            firstLine = (LineString) mLine.getGeometryN(0);
-	            lastLine = (LineString) mLine.getGeometryN(n-1);
+	        	lineFeatureEnd = lineIterator.next();
+
 	        }
 	    } finally {
 	    	lineIterator.close();
 	    }
+		
+    	MultiLineString mLineE = (MultiLineString) lineFeatureEnd.getDefaultGeometry();
+        lastLine = (LineString) mLineE.getGeometryN(0);
+		
 	    Point startP = firstLine.getStartPoint();    		
-	    Point endP = lastLine.getEndPoint();
+	    Point endP = lastLine.getStartPoint();
 	    Geometry startPTransformed = JTS.transform(startP, transform);
 	    Geometry endPTransformed = JTS.transform(endP, transform);
 	    Coordinate startC = startPTransformed.getCoordinate();
@@ -351,9 +359,10 @@ public class MapModel {
 	    
 	    float[] startHeight = (float[]) (dem.evaluate(JTS.toDirectPosition(startC, computationCRS)));
 	    float[] endHeight = (float[]) (dem.evaluate(JTS.toDirectPosition(endC, computationCRS)));
-        
-    	double val = ((endHeight[0]-startHeight[0])/getRouteLen(userRouteLayer)) * 100;        
-		return val;
+	    
+    	double val = ((startHeight[0]-endHeight[0])/getRouteLen(userRouteLayer)) * 100;        
+    	return val;
+		
 	}
 	
 	private double getLineStringLength(LineString line) throws FactoryException, MismatchedDimensionException, TransformException {
