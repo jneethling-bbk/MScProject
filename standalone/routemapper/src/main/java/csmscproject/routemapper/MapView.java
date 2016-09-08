@@ -15,6 +15,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JProgressBar;
 import javax.swing.JSlider;
 import javax.swing.JToolBar;
 
@@ -48,6 +49,8 @@ public class MapView {
 	private JFrame appetiteFrame;
 	private JSlider accIntersectsAllowed;
 	private JSlider polPercentageAllowed;
+	private JProgressBar progressBar;
+	private JLabel statusLabel;
 	
 	public MapView() {
 
@@ -118,7 +121,13 @@ public class MapView {
         zoomToAreaBtn.setToolTipText("Zoom to study area");
         zoomToAreaBtn.setEnabled(false);
         toolBar.addSeparator();
-        toolBar.add(zoomToAreaBtn);       
+        toolBar.add(zoomToAreaBtn);
+        statusLabel = new JLabel("STATUS: waiting for input");
+        toolBar.addSeparator();
+        toolBar.add(statusLabel);
+        progressBar = new JProgressBar();
+        toolBar.addSeparator();
+        toolBar.add(progressBar);
         mapFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         mapFrame.setExtendedState(JFrame.MAXIMIZED_BOTH);
 		
@@ -150,6 +159,18 @@ public class MapView {
 		appetiteFrame.add(appetitePanel);
 		appetiteFrame.setDefaultCloseOperation(JFrame.HIDE_ON_CLOSE);
 		
+	}
+	
+	public void setProgress(int progress) {
+		progressBar.setValue(progress);
+	}
+	
+	public void setStatus(String status) {
+		statusLabel.setText(status);
+	}
+	
+	public void done() {
+		setProgress(100);
 	}
 	
 	public URL getURL(List<String> servers) {
@@ -194,9 +215,13 @@ public class MapView {
 	}
 	
 	public void enableBtns(boolean demConnected, boolean accidentsConnected, boolean pollutionConnected, boolean routeLoaded) {
+		connectDEM.setEnabled(true);
+		connectTrafficBtn.setEnabled(true);
+		connectPollutionBtn.setEnabled(true);
+		addRouteBtn.setEnabled(true);
 		if (accidentsConnected) {
 			toggleTrafficBtn.setEnabled(true);
-			zoomToAreaBtn.setEnabled(true);
+			zoomToAreaBtn.setEnabled(true);			
 		}
 		if (pollutionConnected) {
 			togglePollutionBtn.setEnabled(true);
@@ -204,6 +229,17 @@ public class MapView {
 		if (accidentsConnected && pollutionConnected && demConnected && routeLoaded) {
 			evaluateRouteBtn.setEnabled(true);
 		}
+	}
+	
+	public void disableBtns() {
+		connectDEM.setEnabled(false);
+		connectTrafficBtn.setEnabled(false);
+		toggleTrafficBtn.setEnabled(false);
+		connectPollutionBtn.setEnabled(false);
+		togglePollutionBtn.setEnabled(false);
+		addRouteBtn.setEnabled(false);
+		evaluateRouteBtn.setEnabled(false);
+		viewReportBtn.setEnabled(false);		
 	}
 	
 	public void enableReportBtn() {

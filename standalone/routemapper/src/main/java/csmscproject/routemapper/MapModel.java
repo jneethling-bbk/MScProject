@@ -1,5 +1,8 @@
 package csmscproject.routemapper;
 
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
+import java.beans.PropertyChangeSupport;
 import java.awt.Color;
 import java.io.File;
 import java.io.IOException;
@@ -62,12 +65,33 @@ import com.vividsolutions.jts.geom.Polygon;
 
 public class MapModel {
 	
+	public static final String PROGRESS = "progress";
+	private int progress = 0;
+	private PropertyChangeSupport pcs = new PropertyChangeSupport(this);
+	
     private static StyleFactory styleFactory = CommonFactoryFinder.getStyleFactory();
     private static FilterFactory filterFactory = CommonFactoryFinder.getFilterFactory();
     
-    //private Document routeDoc;
     private CoordinateReferenceSystem displayCRS;
     private CoordinateReferenceSystem computationCRS;
+    private int numberOfSegments;
+    private int counter;
+    
+	public void setProgress(int progress) {
+		int oldProgress = this.progress;
+		this.progress = progress;
+
+		PropertyChangeEvent evt = new PropertyChangeEvent(this, PROGRESS, oldProgress, progress);
+		pcs.firePropertyChange(evt);
+	}
+	
+	public void reset() {
+		setProgress(0);
+	}
+
+	public void addPropertyChangeListener(PropertyChangeListener listener) {
+			pcs.addPropertyChangeListener(listener);
+	}
     
     public List<String> getServers() {
 		String wmsUrlString1 = "http://ows.terrestris.de/osm/service?Service=WMS&Version=1.1.1&Request=GetCapabilities";
@@ -97,7 +121,12 @@ public class MapModel {
     
     public GridCoverage2D getDEM(File file) throws IOException, NoSuchAuthorityCodeException, FactoryException {
     	AbstractGridFormat format = GridFormatFinder.findFormat(file);
-    	GridCoverage2DReader reader = format.getReader(file);
+    	GridCoverage2DReader reader = null;
+    	try {
+    		reader = format.getReader(file);
+    	} catch (UnsupportedOperationException e) {
+    		throw new IOException();
+    	}
     	GridCoverage2D coverage = reader.read(null);
     	return coverage;
     }
@@ -156,6 +185,7 @@ public class MapModel {
     }
 	
 	public FeatureLayer getRouteLayer(File file, String layerTitle) throws IOException, ParserConfigurationException, SAXException, FactoryException, MismatchedDimensionException, TransformException {
+		counter = 0;
 		computationCRS = CRS.decode("EPSG:4326");
 		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
         DocumentBuilder dBuilder;
@@ -166,6 +196,7 @@ public class MapModel {
 		k2l.setDOM(routeDoc);
 		k2l.setCRS(displayCRS);
 		DefaultFeatureCollection lineCollection = k2l.getLine();
+		numberOfSegments = k2l.getSegmentCount();
         FeatureLayer layer = new FeatureLayer(lineCollection, createLineStyle(Color.DARK_GRAY));
         layer.setTitle(layerTitle);
         return layer;
@@ -225,12 +256,13 @@ public class MapModel {
 	            			}
 	            		}
 	            	}
-	            	
+ 
 	            } finally {
 	            	polyIterator.close();
 	            }
+	    		counter++;
+	    		setProgress(counter/(numberOfSegments/20));
 	        }
-	       
 	    } finally {
 	        lineIterator.close();
 	    }
@@ -275,6 +307,8 @@ public class MapModel {
 	            } finally {
 	            	polyIterator.close();
 	            }
+	    		counter++;
+	    		setProgress(counter/(numberOfSegments/20));
 	        }
 	    } finally {
 	        lineIterator.close();
@@ -286,6 +320,7 @@ public class MapModel {
     }
 
 	public double getRouteLen(FeatureLayer userRouteLayer) throws NoSuchAuthorityCodeException, FactoryException, IOException, MismatchedDimensionException, TransformException {
+		counter = 0;
 		double val = 0.0;
 		FeatureCollection<?, ?> lineCollection = userRouteLayer.getFeatureSource().getFeatures();
 		
@@ -318,10 +353,11 @@ public class MapModel {
 		                	    
 	        	    double distance = gc.getOrthodromicDistance();
 	        	    val = val + distance;	        	    
-	            }   	    
+	            }
+	    		counter++;
+	    		setProgress(counter/(numberOfSegments/20));
 	        }
-	    }
-	    finally {
+	    } finally {
 	        iterator.close();
 	    }
 		return val;
@@ -335,7 +371,6 @@ public class MapModel {
 		MultiLineString mLineS = (MultiLineString) lineFeatureStart.getDefaultGeometry();
 		LineString firstLine = (LineString) mLineS.getGeometryN(0);
 		
-		//LineString firstLine = null;
 		LineString lastLine = null;
 		SimpleFeature lineFeatureEnd = null;
 		try {

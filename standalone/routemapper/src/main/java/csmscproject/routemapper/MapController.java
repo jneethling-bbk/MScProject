@@ -2,11 +2,14 @@ package csmscproject.routemapper;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.beans.PropertyChangeEvent;
+import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.List;
 
+import javax.swing.SwingWorker;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.geotools.coverage.grid.GridCoverage2D;
@@ -43,7 +46,7 @@ public class MapController {
 	boolean routeLoaded;
 	boolean routeEvaluated;
 	
-	public MapController(MapModel model, MapView view) {
+	public MapController(MapModel model, final MapView view) {
 		
 		this.model = model;
 		this.view = view;
@@ -58,6 +61,14 @@ public class MapController {
 		this.view.addEvaluateListener(new EvaluateRouteListener());
 		this.view.addReportListener(new ViewReportListener());
 		this.view.addZoomSAreaListener(new ZoomAreaListener());
+		
+		model.addPropertyChangeListener(new PropertyChangeListener() {
+	         public void propertyChange(PropertyChangeEvent pce) {
+	            if (MapModel.PROGRESS.equals(pce.getPropertyName())) {
+	               view.setProgress((Integer)pce.getNewValue());
+	            }
+	         }
+	      });
 		
 		report = new RouteReportImpl();
 		appetite = new RiskAppetiteImpl();
@@ -235,31 +246,57 @@ public class MapController {
 	class EvaluateRouteListener implements ActionListener {
 		public void actionPerformed(ActionEvent e) {
 			report.setRouteFileName(userRouteFileName);
-			try {
-				report.setRouteLength((long) model.getRouteLen(userRouteLayer));
-				report.setSlope(model.getSlope(userRouteLayer, dem));
-				report.setAccidentCount((long) model.getNumIntersects(userRouteLayer, accidentLayer));
-				report.setPollutionPercentage((long) model.getPollutedPercentage(userRouteLayer, pollutionLayer));
-			} catch (MismatchedDimensionException e1) {
-				view.displayMessage(DATA_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
-				return;
-			} catch (NoSuchAuthorityCodeException e1) {
-				// can only be caused by a programming error
-				e1.printStackTrace();
-			} catch (FactoryException e1) {
-				// can only be caused by a programming error
-				e1.printStackTrace();
-			} catch (IOException e1) {
-				view.displayMessage(FILE_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
-				return;
-			} catch (TransformException e1) {
-				view.displayMessage(DATA_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
-				return;
-			}
-			appetite.setMaxAccidentCount((long) view.getAllowedIntersects());
-			appetite.setMaxPollutionPercentage((long) view.getAllowedPercentage());
-			model.resetRouteStyle(userRouteLayer, report, appetite);
-			view.enableReportBtn();
+		      SwingWorker<Void, Void> swingworker = new SwingWorker<Void, Void>() {
+			         @Override
+			         protected Void doInBackground() {
+			        	 double routeLength = 0.0;
+			        	 int accidentCount = 0;
+			        	 int pollutionPercentage = 0;
+			        	 double slope = 0.0;
+			        	 model.reset();
+			        	 view.disableBtns();
+			        	 view.setStatus("STATUS: evaluating route");
+			        	 try {
+			        		 routeLength = model.getRouteLen(userRouteLayer);
+			        		 accidentCount = model.getNumIntersects(userRouteLayer, accidentLayer);
+			        		 pollutionPercentage = model.getPollutedPercentage(userRouteLayer, pollutionLayer);
+			        		 slope = model.getSlope(userRouteLayer, dem);
+			        	 } catch (MismatchedDimensionException e1) {
+			        		 view.displayMessage(DATA_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
+			        		 return null;
+			        	 } catch (NoSuchAuthorityCodeException e1) {
+			        		 // can only be caused by a programming error
+			        		 e1.printStackTrace();
+			        	 } catch (FactoryException e1) {
+			        		 // can only be caused by a programming error
+			        		 e1.printStackTrace();
+			        	 } catch (IOException e1) {
+			        		 view.displayMessage(FILE_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
+			        		 return null;
+			        	 } catch (TransformException e1) {
+			        		 view.displayMessage(DATA_ERROR_MSG, MESSAGE_HEADING_FAIL, 0);
+			        		 return null;
+			        	 }
+			        	 report.setRouteLength((long) routeLength);
+			        	 report.setAccidentCount((long) accidentCount);
+			        	 report.setPollutionPercentage((long) pollutionPercentage);
+			        	 report.setSlope(slope);
+			        	 
+			        	 appetite.setMaxAccidentCount((long) view.getAllowedIntersects());
+			        	 appetite.setMaxPollutionPercentage((long) view.getAllowedPercentage());
+			        	 model.resetRouteStyle(userRouteLayer, report, appetite);
+			        	 view.enableBtns(demConnected, accidentsConnected, pollutionConnected, routeLoaded);
+			        	 view.enableReportBtn();
+			        	 view.setStatus("STATUS: waiting for input");
+			        	 return null;
+			         }
+			         
+			         @Override
+			         protected void done() {
+			            view.done();
+			         }
+			      };
+			      swingworker.execute();
 		}
 	}
 	
