@@ -40,6 +40,7 @@ public class KML2LineImpl implements KML2Line {
 
 	private Document routeDoc;
 	private CoordinateReferenceSystem displayCRS;
+	private int segmentCount;
 	
 	/**
 	 * {@inheritDoc}
@@ -97,6 +98,7 @@ public class KML2LineImpl implements KML2Line {
 		Node cNode = nList.item(0);
 		String raw = cNode.getTextContent();
 		String[] masterArray = raw.split(" ");
+		segmentCount = masterArray.length-1;
 		Coordinate[] tempcoords = new Coordinate[masterArray.length];
 		int index = 0;
 		for (String s : masterArray) {
@@ -152,4 +154,11 @@ public class KML2LineImpl implements KML2Line {
         }  
         return true;  
       }
+
+	/**
+	 * {@inheritDoc}
+	 */
+	public int getSegmentCount() {
+		return segmentCount;
+	}
 }

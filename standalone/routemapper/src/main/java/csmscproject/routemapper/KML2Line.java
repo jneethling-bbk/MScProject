@@ -44,4 +44,11 @@ public interface KML2Line {
 	 */
 	DefaultFeatureCollection getLine() throws IOException;
 	
+	/**
+	 * Get the line segment count, used to calibrate the progress bar
+	 * 
+	 * @return int: the segment count
+	 */
+	int getSegmentCount();
+	
 }
